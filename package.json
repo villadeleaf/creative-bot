@@ -1,0 +1,16 @@
+{
+  "name": "creative-claude-bot",
+  "version": "1.0.0",
+  "description": "น้องครีเอทีฟ 🎨 — AI ครีเอทีฟคอนเทนต์ประจำรีสอร์ท Villa de Leaf (คิดไอเดีย/แคปชัน/สคริปต์คลิป/แผนโพสต์)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.1",
+    "express": "^4.19.2"
+  }
+}
