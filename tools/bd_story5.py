@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+# IG Story วันเกิด FINAL+ — เพิ่ม S1 เทปกาว · S3 คอนเฟตตี · S4 หัวใจลอย
+import subprocess, os
+
+SCRATCH = "/private/tmp/claude-501/-Users-greece-----adv/3d55cd3d-3091-46a0-9c4c-841b1cf85a3c/scratchpad"
+DL = os.path.expanduser("~/Downloads")
+OUT = "/Users/greece/Desktop/สตอรี่วันเกิดแฟน-final2.mp4"
+
+PLAN = [
+    ("S__15278085_0.jpg",            -3.0, "top",    (470, 720)),
+    ("S__15278086_0.jpg",             2.6, "left",   (620, 850)),
+    ("S__15278087_0.jpg",            -2.2, "right",  (460, 980)),
+    ("S__15278089_0.jpg",             3.0, "top",    (600, 1120)),
+    ("S__15278092_0.jpg",            -2.6, "bottom", (480, 1220)),
+    ("LINE_ALBUM_🐷_260730_1.jpg",    2.2, "right",  (630, 760)),
+    ("LINE_ALBUM_🐷_260730_2.jpg",   -2.8, "left",   (450, 860)),
+    ("LINE_ALBUM_🐷_260730_3.jpg",    2.4, "top",    (610, 1000)),
+    ("LINE_ALBUM_Meepooh_260730_2.jpg", -2.0, "right", (500, 1120)),
+    ("S__15278088_0.jpg",             2.8, "left",   (620, 880)),
+    ("LINE_ALBUM_Meepooh_260730_1.jpg", -2.4, "top", (470, 780)),
+    ("S__15278090_0.jpg",             1.8, "right",  (560, 1040)),
+    ("S__15278091_0.jpg",             0.0, "top",    (540, 960)),
+]
+GAPS  = [0, 1.7, 1.5, 1.3, 1.1, 0.95, 0.8, 0.7, 0.6, 0.55, 0.5, 0.5, 1.5]
+FLY_N, FLY_F = 0.55, 0.9
+
+starts, t = [], 0.0
+for g in GAPS:
+    t += g
+    starts.append(round(t, 2))
+FINALE_LAND = starts[-1] + FLY_F
+FLASH_T = round(FINALE_LAND + 0.05, 2)
+ZOOM_T = round(FLASH_T + 0.55, 2)
+TOTAL = round(ZOOM_T + 1.4 + 0.9, 2)
+
+# ---- การ์ด (มีเทปกาว S1) ----
+sizes = []
+for i, (name, ang, _, _) in enumerate(PLAN):
+    p = f"{SCRATCH}/fc{i}.png"
+    subprocess.run(["swift", "polacard.swift", f"{DL}/{name}", p, str(ang), str(i)],
+                   check=True, cwd=SCRATCH, capture_output=True)
+    probe = subprocess.run(["sips", "-g", "pixelWidth", "-g", "pixelHeight", p],
+                           capture_output=True, text=True).stdout
+    w = int([l for l in probe.splitlines() if "pixelWidth" in l][0].split()[-1])
+    h = int([l for l in probe.splitlines() if "pixelHeight" in l][0].split()[-1])
+    sizes.append((w, h))
+print("การ์ด+เทปกาวครบ", len(PLAN), "ใบ")
+
+# ---- เลเยอร์คอนเฟตตี 3 ชั้น + หัวใจ 2 ชั้น ----
+for k, seed in enumerate([11, 22, 33]):
+    subprocess.run(["swift", "layer.swift", "confetti", f"{SCRATCH}/conf{k}.png", str(seed)],
+                   check=True, cwd=SCRATCH, capture_output=True)
+for k, seed in enumerate([44, 55]):
+    subprocess.run(["swift", "layer.swift", "hearts", f"{SCRATCH}/heart{k}.png", str(seed)],
+                   check=True, cwd=SCRATCH, capture_output=True)
+print("เลเยอร์ตกแต่งครบ")
+
+with open(f"{SCRATCH}/white.ppm", "wb") as f:
+    f.write(b"P6\n1080 1920\n255\n" + b"\xff" * (1080 * 1920 * 3))
+
+N = len(PLAN)
+inputs = ["-loop", "1", "-framerate", "30", "-t", str(TOTAL), "-i", f"{DL}/{PLAN[0][0]}"]
+for i in range(N):
+    inputs += ["-loop", "1", "-framerate", "30", "-t", str(TOTAL), "-i", f"{SCRATCH}/fc{i}.png"]
+inputs += ["-loop", "1", "-framerate", "30", "-t", str(TOTAL), "-i", f"{SCRATCH}/white.ppm"]
+for k in range(3):
+    inputs += ["-loop", "1", "-framerate", "30", "-t", str(TOTAL), "-i", f"{SCRATCH}/conf{k}.png"]
+for k in range(2):
+    inputs += ["-loop", "1", "-framerate", "30", "-t", str(TOTAL), "-i", f"{SCRATCH}/heart{k}.png"]
+WHITE_IN, CONF_IN, HEART_IN = N + 1, N + 2, N + 5
+
+fc = ("[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,"
+      "boxblur=32,eq=brightness=-0.08:saturation=1.05,"
+      "zoompan=z='zoom+0.0002':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
+      "s=1080x1920:fps=30[bg];")
+
+cur = "bg"
+for i, ((name, ang, dr, (cx, cy)), (w, h)) in enumerate(zip(PLAN, sizes)):
+    ti, fly = starts[i], (FLY_F if i == N - 1 else FLY_N)
+    xf, yf = cx - w // 2, cy - h // 2
+    if dr == "top":      xs, ys = xf, -(h + 80)
+    elif dr == "bottom": xs, ys = xf, 1920 + 80
+    elif dr == "left":   xs, ys = -(w + 80), yf
+    else:                xs, ys = 1080 + 80, yf
+    P = f"min(max((t-{ti})/{fly},0),1)"
+    E = f"(1+2.70158*pow({P}-1,3)+1.70158*pow({P}-1,2))"
+    sign = "-" if i % 2 else ""
+    fc += f"[{i+1}:v]format=rgba,rotate=a='{sign}0.14*pow(1-{P},3)':c=black@0[r{i}];"
+    fc += (f"[{cur}][r{i}]overlay="
+           f"x='{xs}+({xf}-{xs})*{E}':y='{ys}+({yf}-{ys})*{E}'[o{i}];")
+    cur = f"o{i}"
+
+# แฟลช → ซูม
+fc += f"[{cur}][{WHITE_IN}:v]overlay=enable='between(t,{FLASH_T},{FLASH_T + 0.12})'[fl];"
+fc += (f"[fl]zoompan=z='if(lt(in_time,{ZOOM_T}),1.001,min(1.001+(in_time-{ZOOM_T})*0.78,2.0))':"
+       "d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920:fps=30[zm];")
+
+# S3 คอนเฟตตีโปรย 3 ชั้น (parallax) เริ่มตอนแฟลช
+cur = "zm"
+for k, speed in enumerate([1450, 1150, 900]):
+    ph = 2400
+    fc += (f"[{CONF_IN + k}:v]format=rgba[cf{k}];"
+           f"[{cur}][cf{k}]overlay="
+           f"x='-80+{30 + k * 12}*sin(1.6*t+{k * 2})':"
+           f"y='-{ph}+(t-{FLASH_T})*{speed}':"
+           f"enable='gte(t,{FLASH_T})'[cc{k}];")
+    cur = f"cc{k}"
+
+# S4 หัวใจลอยขึ้นช่วงซูมจบ 2 ชั้น
+for k, speed in enumerate([300, 210]):
+    fc += (f"[{HEART_IN + k}:v]format=rgba[hh{k}];"
+           f"[{cur}][hh{k}]overlay="
+           f"x='-60+{24 + k * 14}*sin(1.2*t+{k * 3})':"
+           f"y='1920-(t-{ZOOM_T})*{speed}':"
+           f"enable='gte(t,{ZOOM_T})'[hc{k}];")
+    cur = f"hc{k}"
+
+fc += (f"[{cur}]eq=saturation=1.05:contrast=1.03,vignette=PI/4.5,"
+       "noise=alls=6:allf=t+u,"
+       "fade=t=in:st=0:d=0.3:color=white,"
+       f"fade=t=out:st={TOTAL - 0.45}:d=0.45:color=white,format=yuv420p[out]")
+
+subprocess.run(["ffmpeg", "-y", "-v", "error"] + inputs +
+               ["-filter_complex", fc, "-map", "[out]",
+                "-c:v", "libx264", "-crf", "19", "-preset", "medium",
+                "-r", "30", "-an", OUT], check=True)
+print(f"เสร็จ: {OUT} ({TOTAL} วิ)")
