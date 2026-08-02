@@ -237,6 +237,62 @@ app.post("/api/edit-image", async (req, res) => {
   } catch (e) { console.error("edit-image:", e.message); res.status(500).json({ error: "ระบบขัดข้อง" }); }
 });
 
+// ============================================================
+//  สตูดิโอ 🎬 — กล่องรับงานตัดต่อ (อัปไฟล์ + ส่งบรีฟ · น้องตัดให้)
+// ============================================================
+
+// ขอ URL อัปโหลดไฟล์ตรงเข้า Supabase Storage (bucket: studio)
+app.post("/api/studio/upload-url", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!SB_ON) return res.status(503).json({ error: "nodb" });
+  const safe = String((req.body || {}).filename || "file").replace(/[^\w.\-]/g, "_").slice(-80);
+  const key = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safe}`;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/storage/v1/object/upload/sign/studio/${key}`, {
+      method: "POST",
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "content-type": "application/json" },
+      body: "{}",
+    });
+    const j = await r.json();
+    if (!r.ok || !j.url) { console.error("sign upload:", r.status, JSON.stringify(j).slice(0, 200)); return res.status(502).json({ error: "sign failed" }); }
+    res.json({
+      uploadUrl: `${SUPABASE_URL}/storage/v1${j.url}`,
+      publicUrl: `${SUPABASE_URL}/storage/v1/object/public/studio/${key}`,
+      path: key,
+    });
+  } catch (e) { console.error("upload-url:", e.message); res.status(500).json({ error: "server" }); }
+});
+
+// รายการงาน (แชร์ทั้งทีม)
+app.get("/api/studio", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!SB_ON) return res.json({ rows: [], nodb: true });
+  try {
+    const rows = await sb("studio_jobs?select=id,brief,format,feel,font,files,status,result_url&order=id.desc&limit=50");
+    res.json({ rows });
+  } catch (e) { console.error("studio get:", e.message); res.status(500).json({ error: "db" }); }
+});
+
+// ส่งงานใหม่
+app.post("/api/studio", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!SB_ON) return res.status(503).json({ error: "nodb" });
+  const { brief, format, feel, font, files } = req.body || {};
+  if (!brief) return res.status(400).json({ error: "brief required" });
+  const row = {
+    brief: String(brief).slice(0, 2000),
+    format: format ? String(format).slice(0, 40) : null,
+    feel: feel ? String(feel).slice(0, 40) : null,
+    font: font ? String(font).slice(0, 40) : null,
+    files: Array.isArray(files) ? files.slice(0, 20) : [],
+    status: "queued",
+  };
+  try {
+    const r = await sb("studio_jobs", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(row) });
+    res.json({ row: Array.isArray(r) ? r[0] : r });
+  } catch (e) { console.error("studio post:", e.message); res.status(500).json({ error: "db" }); }
+});
+
 app.listen(PORT, () => {
   console.log(`น้องครีเอทีฟ 🎨 (${MODEL}) รันอยู่ที่พอร์ต ${PORT} · DB:${SB_ON ? "on" : "off"} · แก้รูป:${OPENAI_KEY ? "on" : "off"}`);
 });
