@@ -128,6 +128,9 @@
   .stthumbs .th img{width:100%;height:100%;object-fit:cover}
   .stthumbs .th .rm{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:17px;height:17px;font-size:11px;cursor:pointer;line-height:1}
   .stthumbs .th .up{position:absolute;inset:0;background:rgba(0,0,0,.5);color:#fff;display:grid;place-items:center;font-size:10px}
+  .sug{margin-top:8px;border:1px solid var(--content-line);background:var(--content);color:var(--accent);border-radius:10px;padding:9px 13px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
+  .sug:disabled{opacity:.5}
+  .attachbar .askimg{border:1px solid var(--content-line);background:var(--panel);color:var(--accent);border-radius:9px;padding:6px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex:none}
   .stgo{margin-top:16px;width:100%;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:800;color:#fff;background:var(--accent);cursor:pointer;font-family:inherit}
   .stgo:disabled{opacity:.5}
   .stmsg{font-size:12.5px;color:var(--ok);margin-top:9px;text-align:center;min-height:16px}
@@ -311,7 +314,8 @@
             </div>
             <div id="attachBar" class="attachbar">
               <img id="attachThumb" alt="">
-              <span>รูปจริงแนบแล้ว · พิมพ์บอกว่าจะแก้ยังไง แล้วกด "แก้รูป"</span>
+              <span>รูปแนบแล้ว · <b>แก้รูป</b> = พิมพ์สั่งแล้วกดส่ง · <b>ถามน้อง</b> = ให้น้องดูรูป (เทรนด์/ไอเดีย)</span>
+              <button class="askimg" onclick="visionAsk()">💬 ถามน้อง</button>
               <button onclick="clearAttach()">✕</button>
             </div>
             <div class="bar">
@@ -330,13 +334,13 @@
           <p class="psub">น้องครีเอทีฟทำอะไรได้บ้าง + ใช้ยังไง — อ่านครั้งเดียว ใช้เป็นเลย</p>
           <div class="guide">
             <div class="gcard"><div class="gh"><span class="gi">💬</span><b>คุยกับน้องครีเอทีฟ</b></div>
-              <p>พิมพ์ถามอะไรก็ได้เรื่องคอนเทนต์ — คิดแคปชัน สคริปต์ ไอเดีย แคมเปญ · <b>เจอเทรนด์ TikTok/มีม ก็แปะรูปหรือบอกน้อง</b> น้องดัดให้เข้ารีสอร์ท</p></div>
+              <p>พิมพ์ถามอะไรก็ได้เรื่องคอนเทนต์ — คิดแคปชัน สคริปต์ ไอเดีย แคมเปญ · <b>เจอเทรนด์ TikTok/มีม แคปมาแปะ (📎) แล้วกด "💬 ถามน้อง"</b> น้องดูรูปแล้วดัดให้เข้ารีสอร์ทเลย</p></div>
             <div class="gcard"><div class="gh"><span class="gi">✨</span><b>คลัง Hook</b></div>
               <p>คลังประโยคเปิดเด็ดๆ สำหรับรีสอร์ท · เจออันที่ชอบกด <b>"ใช้อันนี้"</b> น้องเขียนสคริปต์ + แคปชันจาก hook นั้นให้เลย</p></div>
             <div class="gcard"><div class="gh"><span class="gi">≈</span><b>เทรนด์/โอกาส</b></div>
               <p>โอกาส/ฤดูกาลเดือนนี้ที่เอามาทำคอนเทนต์ได้ (วันแม่ หน้าฝน ฯลฯ) · กด <b>"ทำคอนเทนต์"</b> น้องขยายเป็นไอเดีย+สคริปต์</p></div>
             <div class="gcard"><div class="gh"><span class="gi">🎬</span><b>สตูดิโอ (ส่งคลิปให้น้องตัด)</b></div>
-              <p>อัปรูป/วิดีโอจริง (คลิป ≤50MB) + เขียนบอกว่าอยากได้แบบไหน + เลือกฟีล/ฟอนต์ → กด <b>ส่งให้น้องตัด</b> · งานเข้าคิว น้องตัดให้ แล้วคลิปมาโผล่ให้โหลด (ฟรี)</p></div>
+              <p>อัปรูป/วิดีโอจริง (คลิป ≤50MB) + เขียนบอกว่าอยากได้แบบไหน (คิดไม่ออกกด <b>🧠 ให้น้องคิดให้</b>) → กด <b>ส่งให้น้องตัด</b> · คลิปเสร็จมาโผล่ให้โหลด · ไม่ถูกใจกด <b>🔁 ขอแก้เพิ่ม</b> ได้ (ฟรี)</p></div>
             <div class="gcard"><div class="gh"><span class="gi">📊</span><b>วิเคราะห์โพสต์</b></div>
               <p>แคปหน้า Insights (IG/FB/TikTok) มาวาง → น้องอ่านตัวเลขแล้วบอกว่า <b>โพสต์ไหนปัง ควรทำอะไรต่อ</b> · ไม่ต้องรอต่อ API</p></div>
             <div class="gcard"><div class="gh"><span class="gi">🎨</span><b>วาดรูป (ฟรี)</b></div>
@@ -391,6 +395,7 @@
             <div class="scard">
               <h3>✨ ส่งงานใหม่</h3>
               <textarea id="stBrief" rows="3" placeholder="บอกน้องว่าอยากได้คลิปแบบไหน เช่น รีลโปรโมทห้อง Pool Villa ช่วงเช้าหมอกลง ฟีลสงบหรูๆ มีคนนั่งจิบกาแฟริมสระ"></textarea>
+              <button class="sug" id="sugBtn" onclick="suggestBrief()">🧠 ให้น้องช่วยคิดโจทย์/คำให้</button>
               <div class="lbl2">ลงที่ไหน</div>
               <div class="opt" data-opt="format"><span class="o on">รีล 9:16</span><span class="o">สตอรี่</span><span class="o">TikTok</span></div>
               <div class="lbl2">ฟีล</div>
@@ -543,6 +548,18 @@
     }catch(e){loading.textContent="เชื่อมต่อไม่ได้ ลองใหม่ค่ะ 🙏";done();}
   }
 
+  // ถามน้องเกี่ยวกับรูปที่แนบ (เทรนด์/ไอเดีย/รูปอะไรก็ได้)
+  async function visionAsk(){
+    if(!pendingImg)return;
+    var t=input.value.trim()||"ช่วยดูรูปนี้ให้หน่อย เอามาทำคอนเทนต์รีสอร์ทยังไงได้บ้าง";
+    var img=pendingImg;input.value="";input.style.height="auto";addUserImg(img,t);clearAttach();
+    var sb=document.getElementById("send"),db=document.getElementById("draw");sb.disabled=true;db.disabled=true;
+    var loading=addMsg("น้องกำลังดูรูปค่ะ... 👀","bot");function done(){sb.disabled=false;db.disabled=false;}
+    try{var j=await api("vision",{method:"POST",body:JSON.stringify({image:img,message:t})});
+      loading.remove();addMsg((j&&j.reply)||"ดูรูปไม่สำเร็จ ลองใหม่นะคะ 🙏","bot");done();
+    }catch(e){loading.textContent="เชื่อมต่อไม่ได้ ลองใหม่ค่ะ 🙏";done();}
+  }
+  window.visionAsk=visionAsk;
   async function send(){
     if(pendingImg)return editImage(input.value.trim());
     var t=input.value.trim();if(!t)return;input.value="";input.style.height="auto";addMsg(t,"you");
@@ -660,7 +677,22 @@
     }catch(e){msg.style.color='var(--wait)';msg.textContent='ส่งไม่สำเร็จ ลองใหม่ค่ะ';}
     btn.disabled=false;}
   window.submitJob=submitJob;
-  var stStatus={queued:['🕒 เข้าคิว','queued'],editing:['⏳ น้องกำลังตัด','editing'],done:['✅ เสร็จแล้ว','done']};
+  // ให้น้องคิดโจทย์/คำ (เติมลงช่องบรีฟ)
+  async function suggestBrief(){var b=document.getElementById("sugBtn"),msg=document.getElementById("stMsg");
+    b.disabled=true;b.textContent="🧠 น้องกำลังคิด...";msg.textContent="";
+    try{var o=stOpt();var j=await api("suggest",{method:"POST",body:JSON.stringify({format:o.format,feel:o.feel,hint:document.getElementById("stBrief").value.trim()})});
+      if(j&&j.text){document.getElementById("stBrief").value=j.text;document.getElementById("stBrief").rows=8;}
+      else{msg.style.color="var(--wait)";msg.textContent=(j&&j.error)||"คิดไม่สำเร็จ ลองใหม่ค่ะ";}
+    }catch(e){msg.style.color="var(--wait)";msg.textContent="เชื่อมต่อไม่ได้ ลองใหม่ค่ะ";}
+    b.disabled=false;b.textContent="🧠 ให้น้องช่วยคิดโจทย์/คำให้";}
+  window.suggestBrief=suggestBrief;
+  // ขอแก้เพิ่มจากงานที่เสร็จแล้ว
+  async function reviseJob(r){
+    var v=prompt("อยากแก้ตรงไหนเพิ่มคะ? บอกน้องได้เลย\nเช่น: เปลี่ยนเพลง / คำช้าไป / ขอโทนอบอุ่นกว่านี้","");
+    if(!v||!v.trim())return;
+    try{await api("studio",{method:"POST",body:JSON.stringify({brief:"🔁 แก้เพิ่มจากงาน #"+r.id+": "+v.trim(),format:r.format,feel:r.feel,font:r.font,files:r.files||[]})});
+      loadStudio();}catch(e){alert("ส่งไม่สำเร็จ ลองใหม่ค่ะ");}}
+  var stStatus={queued:['✅ รับงานแล้ว · รอน้องตัด','queued'],editing:['⏳ น้องกำลังตัด','editing'],done:['✅ เสร็จแล้ว','done']};
   async function loadStudio(){var el=document.getElementById('stJobs');
     try{var j=await api('studio');var rows=j.rows||[];
       if(!rows.length){el.innerHTML='<div class="empty-note">ยังไม่มีงาน — ส่งงานแรกได้เลยค่ะ 🎬</div>';return;}
@@ -670,6 +702,7 @@
           '<div class="meta">'+[r.format,r.feel,r.font].filter(Boolean).join(' · ')+'</div>'+
           (thumbs?'<div class="sthumbs">'+thumbs+'</div>':'')+
           (r.result_url?'<a class="dl" href="'+r.result_url+'" target="_blank" rel="noopener">⬇️ โหลดคลิปที่เสร็จแล้ว</a>':'');
+        if(r.status==='done'){var rv=document.createElement('button');rv.className='sug';rv.style.marginLeft='8px';rv.textContent='🔁 ขอแก้เพิ่ม';rv.onclick=function(){reviseJob(r);};d.appendChild(rv);}
         el.appendChild(d);});
     }catch(e){el.innerHTML='<div class="empty-note">โหลดงานไม่ได้ ลองใหม่ค่ะ</div>';}}
 

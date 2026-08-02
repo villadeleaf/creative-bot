@@ -12,7 +12,7 @@ const path = require("path");
 try { require("dotenv").config({ path: path.join(__dirname, ".env") }); } catch (e) {} // โหลด .env ตอนรัน local (บน Render ใช้ env จาก dashboard)
 
 const express = require("express");
-const { generateReply, imagePrompt, analyzeImage, MODEL } = require("./brain");
+const { generateReply, imagePrompt, analyzeImage, visionChat, MODEL } = require("./brain");
 
 const app = express();
 const PORT = process.env.PORT || 3100;
@@ -291,6 +291,31 @@ app.post("/api/studio", async (req, res) => {
     const r = await sb("studio_jobs", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(row) });
     res.json({ row: Array.isArray(r) ? r[0] : r });
   } catch (e) { console.error("studio post:", e.message); res.status(500).json({ error: "db" }); }
+});
+
+// ---- แปะรูปในแชทแล้วถามน้อง (เทรนด์/รูปอะไรก็ได้) ----
+app.post("/api/vision", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  const { image, message } = req.body || {};
+  if (!image) return res.status(400).json({ error: "image required" });
+  try {
+    const reply = await visionChat(image, message);
+    res.json({ reply });
+  } catch (e) { console.error("vision:", e.message); res.status(500).json({ error: "ดูรูปไม่สำเร็จ ลองใหม่ค่ะ" }); }
+});
+
+// ---- ให้น้องคิดโจทย์/คำ ให้งานสตูดิโอ ----
+app.post("/api/suggest", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  const { format, feel, hint } = req.body || {};
+  const msg =
+    `ช่วยคิดให้หน่อยสำหรับคลิป ${format || "รีล 9:16"} ฟีล ${feel || "หรูสงบ"}` +
+    (hint ? ` ต่อยอดจากไอเดียนี้: "${String(hint).slice(0, 500)}"` : " (เลือกหัวข้อที่เหมาะกับช่วงนี้ให้เลย)") +
+    " — ขอสั้นกระชับ: 1) โจทย์คลิป 1 ประโยค 2) ข้อความขึ้นบนคลิป 2-3 ท่อน 3) แคปชันโพสต์ 4) แฮชแท็ก";
+  try {
+    const text = await generateReply([{ role: "user", content: msg }]);
+    res.json({ text });
+  } catch (e) { console.error("suggest:", e.message); res.status(500).json({ error: "คิดไม่สำเร็จ ลองใหม่ค่ะ" }); }
 });
 
 // ---- วิเคราะห์โพสต์จากรูป Insights (Claude vision) ----

@@ -136,4 +136,29 @@ async function analyzeImage(dataUrl, note) {
   return block ? block.text.trim() : "";
 }
 
-module.exports = { generateReply, imagePrompt, analyzeImage, MODEL };
+// ---- ดูรูปแล้วคุย (persona น้องครีเอทีฟ) — ใช้ตอนทีมแปะรูปเทรนด์/รูปอะไรก็ได้ในแชท ----
+async function visionChat(dataUrl, question) {
+  const m = /^data:(image\/[\w.+-]+);base64,(.+)$/.exec(dataUrl || "");
+  if (!m) throw new Error("bad image");
+  const res = await client.messages.create({
+    model: MODEL,
+    max_tokens: 2500,
+    system: [
+      { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
+      { type: "text", text: currentContext() },
+    ],
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: m[1], data: m[2] } },
+          { type: "text", text: String(question || "ช่วยดูรูปนี้ให้หน่อยค่ะ") },
+        ],
+      },
+    ],
+  });
+  const block = res.content.find((b) => b.type === "text");
+  return block ? block.text.trim() : "";
+}
+
+module.exports = { generateReply, imagePrompt, analyzeImage, visionChat, MODEL };
