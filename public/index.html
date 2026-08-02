@@ -164,6 +164,17 @@
   .anthumb{margin-top:8px}
   .anthumb img{max-width:100%;border-radius:10px;border:1px solid var(--line)}
   .anresult{font-size:13.5px;line-height:1.65;white-space:pre-wrap;color:var(--ink);min-height:120px}
+  /* guide */
+  .guide{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:760px){.guide{grid-template-columns:1fr}}
+  .gcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px 16px;box-shadow:var(--shadow)}
+  .gcard .gh{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+  .gcard .gi{font-size:20px}
+  .gcard .gh b{font-size:14.5px}
+  .gcard p{font-size:13px;color:var(--muted);line-height:1.6}
+  .gcard p b{color:var(--accent);font-weight:700}
+  .gtip{margin-top:14px;background:var(--content);border:1px solid var(--content-line);border-radius:12px;padding:13px 15px;font-size:13px;line-height:1.6}
+  .gtip b{color:var(--accent)}
   .msg .cap{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5}
   .msg .cap a{color:var(--accent);font-weight:700;text-decoration:none}
 
@@ -233,6 +244,7 @@
       <nav class="nav" id="nav">
         <a data-sec="home" class="on"><span class="ic">▦</span> หน้าหลัก</a>
         <a data-sec="chat"><span class="ic">💬</span> คุยกับน้องครีเอทีฟ</a>
+        <a data-sec="guide"><span class="ic">📖</span> คู่มือใช้</a>
         <div class="grp">ทำคอนเทนต์</div>
         <a data-sec="hooks"><span class="ic">✨</span> คลัง Hook</a>
         <a data-sec="trends"><span class="ic">≈</span> เทรนด์/โอกาส</a>
@@ -308,6 +320,31 @@
               <button id="send" onclick="send()">ส่ง</button>
             </div>
           </div>
+        </section>
+
+        <!-- GUIDE -->
+        <section class="sec" id="sec-guide">
+          <h2 class="page">คู่มือใช้ 📖</h2>
+          <p class="psub">น้องครีเอทีฟทำอะไรได้บ้าง + ใช้ยังไง — อ่านครั้งเดียว ใช้เป็นเลย</p>
+          <div class="guide">
+            <div class="gcard"><div class="gh"><span class="gi">💬</span><b>คุยกับน้องครีเอทีฟ</b></div>
+              <p>พิมพ์ถามอะไรก็ได้เรื่องคอนเทนต์ — คิดแคปชัน สคริปต์ ไอเดีย แคมเปญ · <b>เจอเทรนด์ TikTok/มีม ก็แปะรูปหรือบอกน้อง</b> น้องดัดให้เข้ารีสอร์ท</p></div>
+            <div class="gcard"><div class="gh"><span class="gi">✨</span><b>คลัง Hook</b></div>
+              <p>คลังประโยคเปิดเด็ดๆ สำหรับรีสอร์ท · เจออันที่ชอบกด <b>"ใช้อันนี้"</b> น้องเขียนสคริปต์ + แคปชันจาก hook นั้นให้เลย</p></div>
+            <div class="gcard"><div class="gh"><span class="gi">≈</span><b>เทรนด์/โอกาส</b></div>
+              <p>โอกาส/ฤดูกาลเดือนนี้ที่เอามาทำคอนเทนต์ได้ (วันแม่ หน้าฝน ฯลฯ) · กด <b>"ทำคอนเทนต์"</b> น้องขยายเป็นไอเดีย+สคริปต์</p></div>
+            <div class="gcard"><div class="gh"><span class="gi">🎬</span><b>สตูดิโอ (ส่งคลิปให้น้องตัด)</b></div>
+              <p>อัปรูป/วิดีโอจริง (คลิป ≤50MB) + เขียนบอกว่าอยากได้แบบไหน + เลือกฟีล/ฟอนต์ → กด <b>ส่งให้น้องตัด</b> · งานเข้าคิว น้องตัดให้ แล้วคลิปมาโผล่ให้โหลด (ฟรี)</p></div>
+            <div class="gcard"><div class="gh"><span class="gi">📊</span><b>วิเคราะห์โพสต์</b></div>
+              <p>แคปหน้า Insights (IG/FB/TikTok) มาวาง → น้องอ่านตัวเลขแล้วบอกว่า <b>โพสต์ไหนปัง ควรทำอะไรต่อ</b> · ไม่ต้องรอต่อ API</p></div>
+            <div class="gcard"><div class="gh"><span class="gi">🎨</span><b>วาดรูป (ฟรี)</b></div>
+              <p>ในหน้าแชท พิมพ์บอกว่าอยากได้รูปแบบไหน แล้วกดปุ่ม <b>🎨</b> น้องวาดให้ (ใช้ทำภาพ mood/ไอเดีย/แบ็กกราวด์)</p></div>
+            <div class="gcard"><div class="gh"><span class="gi">🖼️</span><b>แก้รูปจริง</b></div>
+              <p>ในหน้าแชท กดปุ่ม <b>📎</b> อัปรูปจริงของรีสอร์ท + สั่งว่าจะแก้ยังไง (เช่น เปลี่ยนท้องฟ้าตอนเย็น ใส่ข้อความ) น้องแก้ให้โดยเก็บรูปเดิมไว้</p></div>
+            <div class="gcard"><div class="gh"><span class="gi">📅</span><b>ปฏิทิน + 💾 คลังไอเดีย</b></div>
+              <p>วางแผนโพสต์ทั้งเดือน + เก็บแคปชัน/ไอเดียเด็ด · <b>แชร์กันทั้งทีม</b> ทุกคนเห็นตรงกัน</p></div>
+          </div>
+          <div class="gtip">💡 เคล็ดลับ: งานส่วนใหญ่เริ่มที่ <b>"คุยกับน้อง"</b> ได้เลย — คิดไม่ออกก็พิมพ์ถามน้องก่อน แล้วค่อยไปหน้าอื่นตามงาน</div>
         </section>
 
         <!-- HOOKS -->
@@ -430,7 +467,7 @@
   function showApp(){document.getElementById("login").style.display="none";document.getElementById("app").style.display="block";loadCal();loadLib();}
 
   // ---- nav ----
-  var titles={home:"หน้าหลัก",chat:"คุยกับน้องครีเอทีฟ",hooks:"คลัง Hook ✨",trends:"เทรนด์/โอกาส ≈",calendar:"ปฏิทินคอนเทนต์",library:"คลังไอเดีย",studio:"สตูดิโอ 🎬",analytics:"วิเคราะห์โพสต์ 📊",ads:"Ads FB/IG"};
+  var titles={home:"หน้าหลัก",chat:"คุยกับน้องครีเอทีฟ",guide:"คู่มือใช้ 📖",hooks:"คลัง Hook ✨",trends:"เทรนด์/โอกาส ≈",calendar:"ปฏิทินคอนเทนต์",library:"คลังไอเดีย",studio:"สตูดิโอ 🎬",analytics:"วิเคราะห์โพสต์ 📊",ads:"Ads FB/IG"};
   function go(sec){
     document.querySelectorAll(".nav a").forEach(function(a){a.classList.toggle("on",a.dataset.sec===sec);});
     document.querySelectorAll(".sec").forEach(function(s){s.classList.toggle("on",s.id==="sec-"+sec);});
