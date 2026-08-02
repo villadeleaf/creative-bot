@@ -142,6 +142,28 @@
   .sj .dl{display:inline-block;margin-top:8px;background:var(--ok);color:#fff;padding:7px 13px;border-radius:9px;font-size:12.5px;font-weight:700;text-decoration:none}
   .sj .sthumbs{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
   .sj .sthumbs img,.sj .sthumbs .v{width:38px;height:48px;border-radius:6px;object-fit:cover;background:var(--panel);display:grid;place-items:center;font-size:16px}
+  /* hooks */
+  .hsearch{width:100%;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:12px 14px;font-size:14px;font-family:inherit;color:var(--ink);margin-bottom:12px}
+  .hooklist{display:flex;flex-direction:column;gap:9px}
+  .hookrow{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 15px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
+  .hookrow .hk{flex:1;font-size:14px;font-weight:600;line-height:1.4}
+  .hookrow .tag{font-size:10px;font-weight:800;letter-spacing:.05em;padding:3px 8px;border-radius:8px;background:var(--content);color:var(--accent);flex:none}
+  .hookrow .use{flex:none;border:none;background:var(--accent);color:#fff;border-radius:9px;padding:8px 13px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
+  .hcat{font-size:12px;font-weight:800;color:var(--muted);letter-spacing:.05em;margin:16px 0 4px}
+  /* trends */
+  .trendlist{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  @media(max-width:720px){.trendlist{grid-template-columns:1fr}}
+  .trendcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px;box-shadow:var(--shadow)}
+  .trendcard .em{font-size:24px}
+  .trendcard b{display:block;margin:7px 0 3px;font-size:14.5px}
+  .trendcard p{font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:11px}
+  .trendcard .use{border:none;background:var(--content);border:1px solid var(--content-line);color:var(--accent);border-radius:9px;padding:8px 13px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
+  /* analytics */
+  .anwrap{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:820px){.anwrap{grid-template-columns:1fr}}
+  .anthumb{margin-top:8px}
+  .anthumb img{max-width:100%;border-radius:10px;border:1px solid var(--line)}
+  .anresult{font-size:13.5px;line-height:1.65;white-space:pre-wrap;color:var(--ink);min-height:120px}
   .msg .cap{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5}
   .msg .cap a{color:var(--accent);font-weight:700;text-decoration:none}
 
@@ -212,11 +234,13 @@
         <a data-sec="home" class="on"><span class="ic">▦</span> หน้าหลัก</a>
         <a data-sec="chat"><span class="ic">💬</span> คุยกับน้องครีเอทีฟ</a>
         <div class="grp">ทำคอนเทนต์</div>
+        <a data-sec="hooks"><span class="ic">✨</span> คลัง Hook</a>
+        <a data-sec="trends"><span class="ic">≈</span> เทรนด์/โอกาส</a>
         <a data-sec="calendar"><span class="ic">📅</span> ปฏิทินคอนเทนต์</a>
         <a data-sec="library"><span class="ic">💾</span> คลังไอเดีย</a>
         <a data-sec="studio"><span class="ic">🎬</span> สตูดิโอ</a>
-        <div class="grp">วิเคราะห์ (เร็วๆ นี้)</div>
-        <a data-sec="analytics"><span class="ic">📊</span> Analytics <span class="soon">เร็วๆ นี้</span></a>
+        <div class="grp">วิเคราะห์</div>
+        <a data-sec="analytics"><span class="ic">📊</span> วิเคราะห์โพสต์</a>
         <a data-sec="ads"><span class="ic">🎯</span> Ads FB/IG <span class="soon">เร็วๆ นี้</span></a>
       </nav>
       <div class="foot">
@@ -286,6 +310,21 @@
           </div>
         </section>
 
+        <!-- HOOKS -->
+        <section class="sec" id="sec-hooks">
+          <h2 class="page">คลัง Hook ✨</h2>
+          <p class="psub">Hook เด็ดสำหรับรีสอร์ท · กด "ใช้อันนี้" น้องเขียนสคริปต์/แคปชันจาก hook ให้เลย</p>
+          <input id="hookSearch" class="hsearch" placeholder="🔍 ค้นหา hook..." oninput="renderHooks()">
+          <div id="hookList" class="hooklist"></div>
+        </section>
+
+        <!-- TRENDS -->
+        <section class="sec" id="sec-trends">
+          <h2 class="page">เทรนด์/โอกาส ≈</h2>
+          <p class="psub">โอกาส/ฤดูกาลเดือนนี้ที่เอามาทำคอนเทนต์ได้ · กด "ทำคอนเทนต์" น้องขยายเป็นไอเดีย+สคริปต์ให้</p>
+          <div id="trendList" class="trendlist"></div>
+        </section>
+
         <!-- CALENDAR -->
         <section class="sec" id="sec-calendar">
           <h2 class="page">ปฏิทินคอนเทนต์</h2>
@@ -333,7 +372,25 @@
         </section>
 
         <!-- SOON -->
-        <section class="sec" id="sec-analytics"><div class="soonbox"><div class="big">📊</div><h3>Analytics — เร็วๆ นี้</h3><p>รวมยอดวิว/ยอดจากทุกแพลตฟอร์ม (FB · IG · TikTok) ในหน้าเดียว — ต้องต่อข้อมูลจากแต่ละแพลตฟอร์มก่อน เป็นเฟสถัดไปค่ะ</p></div></section>
+        <section class="sec" id="sec-analytics">
+          <h2 class="page">วิเคราะห์โพสต์ 📊</h2>
+          <p class="psub">แคปหน้า Insights (IG/FB/TikTok) มาวาง → น้องอ่านแล้วบอกว่าโพสต์ไหนปัง ควรทำอะไรต่อ · ไม่ต้องรอต่อ API</p>
+          <div class="anwrap">
+            <div class="scard">
+              <div class="lbl2">แคปหน้า Insights มาวาง</div>
+              <input type="file" id="anFile" accept="image/*" onchange="anPick(this)">
+              <div id="anThumb" class="anthumb"></div>
+              <div class="lbl2">อยากรู้อะไรเพิ่ม (ไม่บังคับ)</div>
+              <textarea id="anNote" rows="2" placeholder="เช่น ควรโพสต์แนวไหนต่อ / เวลาไหนดี"></textarea>
+              <button class="stgo" onclick="analyze()">ให้น้องวิเคราะห์ 📊</button>
+              <div id="anMsg" class="stmsg"></div>
+            </div>
+            <div class="scard">
+              <div class="lbl2">ผลวิเคราะห์จากน้อง</div>
+              <div id="anResult" class="anresult"><div class="empty-note">อัปรูป Insights แล้วกดวิเคราะห์ได้เลยค่ะ 📊</div></div>
+            </div>
+          </div>
+        </section>
         <section class="sec" id="sec-ads"><div class="soonbox"><div class="big">🎯</div><h3>Ads FB/IG — เร็วๆ นี้</h3><p>ดูว่าโพสต์/แอดไหนควรบูสต์ งบเท่าไหร่ — ต้องต่อ API โฆษณา Facebook/IG ก่อน เป็นเฟสถัดไปค่ะ</p></div></section>
 
       </div>
@@ -373,7 +430,7 @@
   function showApp(){document.getElementById("login").style.display="none";document.getElementById("app").style.display="block";loadCal();loadLib();}
 
   // ---- nav ----
-  var titles={home:"หน้าหลัก",chat:"คุยกับน้องครีเอทีฟ",calendar:"ปฏิทินคอนเทนต์",library:"คลังไอเดีย",studio:"สตูดิโอ 🎬",analytics:"Analytics",ads:"Ads FB/IG"};
+  var titles={home:"หน้าหลัก",chat:"คุยกับน้องครีเอทีฟ",hooks:"คลัง Hook ✨",trends:"เทรนด์/โอกาส ≈",calendar:"ปฏิทินคอนเทนต์",library:"คลังไอเดีย",studio:"สตูดิโอ 🎬",analytics:"วิเคราะห์โพสต์ 📊",ads:"Ads FB/IG"};
   function go(sec){
     document.querySelectorAll(".nav a").forEach(function(a){a.classList.toggle("on",a.dataset.sec===sec);});
     document.querySelectorAll(".sec").forEach(function(s){s.classList.toggle("on",s.id==="sec-"+sec);});
@@ -577,7 +634,99 @@
         el.appendChild(d);});
     }catch(e){el.innerHTML='<div class="empty-note">โหลดงานไม่ได้ ลองใหม่ค่ะ</div>';}}
 
+  // ---- คลัง Hook ----
+  var HOOKS=[
+    {c:"หยุดนิ้ว",t:"ถ้าเบื่อเมือง… ที่นี่คือคำตอบ"},
+    {c:"หยุดนิ้ว",t:"อย่าเพิ่งจองที่พักอื่น จนกว่าจะเห็นอันนี้"},
+    {c:"หยุดนิ้ว",t:"POV: ตื่นมาเจอวิวแบบนี้ทุกเช้า"},
+    {c:"หยุดนิ้ว",t:"บอกเลยว่าที่นี่ไม่เหมือนที่พักทั่วไป เพราะ…"},
+    {c:"ขายห้อง",t:"ห้องนี้จองยากที่สุด เพราะ…"},
+    {c:"ขายห้อง",t:"จ่ายเท่านี้ ได้ครบทั้งหมดนี้"},
+    {c:"ขายห้อง",t:"ที่พักริมน้ำที่คนถามหาเยอะสุดตอนนี้"},
+    {c:"รีวิว",t:"รีวิวจริงจากลูกค้า ไม่ได้จ้าง"},
+    {c:"รีวิว",t:"สิ่งที่ลูกค้าพูดถึงบ่อยที่สุดเวลามาพัก"},
+    {c:"รีวิว",t:"มาครั้งเดียว ติดใจจนต้องกลับมาอีก"},
+    {c:"กิจกรรม",t:"1 วันที่นี่ ทำอะไรได้บ้าง (เช้า-สาย-บ่าย-เย็น)"},
+    {c:"กิจกรรม",t:"กิจกรรมที่พลาดไม่ได้ถ้ามาพักที่นี่"},
+    {c:"กิจกรรม",t:"เที่ยวแก่งกระจานทั้งที ต้องไม่พลาด…"},
+    {c:"โปร/CTA",t:"แพ็กเกจนี้ มีจำนวนจำกัด รีบทัก"},
+    {c:"โปร/CTA",t:"ทริควางแผนเที่ยวที่นี่ให้คุ้มที่สุด"},
+    {c:"โปร/CTA",t:"อยากได้ราคาพิเศษ ทำตามนี้เลย"},
+    {c:"เล่าเรื่อง",t:"เหตุผลที่คนเลือกมาพักที่นี่ ไม่ใช่แค่เพราะสวย"},
+    {c:"เล่าเรื่อง",t:"บรรยากาศแบบนี้ หาไม่ได้ในเมือง"},
+    {c:"เล่าเรื่อง",t:"ที่นี่เหมาะกับใคร… ถ้าคุณคือคนนั้น มาเลย"},
+    {c:"เทรนด์",t:"เทรนด์นี้ แต่เวอร์ชันริมน้ำที่รีสอร์ท"},
+    {c:"เทรนด์",t:"ทำตามเทรนด์ แต่ใส่ฟีลพักผ่อนสุดชิล"},
+    {c:"เทรนด์",t:"สายมูห้ามพลาด… ที่เที่ยวเสริมพลังริมน้ำ"}
+  ];
+  function renderHooks(){
+    var q=(document.getElementById("hookSearch").value||"").trim().toLowerCase();
+    var el=document.getElementById("hookList");el.innerHTML="";
+    var cats={},order=[];
+    HOOKS.filter(function(h){return !q||h.t.toLowerCase().indexOf(q)>=0||h.c.toLowerCase().indexOf(q)>=0;})
+      .forEach(function(h){if(!cats[h.c]){cats[h.c]=[];order.push(h.c);}cats[h.c].push(h);});
+    if(!order.length){el.innerHTML='<div class="empty-note">ไม่เจอ hook ที่ค้นหา ลองคำอื่นค่ะ</div>';return;}
+    order.forEach(function(c){
+      var head=document.createElement("div");head.className="hcat";head.textContent=c;el.appendChild(head);
+      cats[c].forEach(function(h){
+        var r=document.createElement("div");r.className="hookrow";
+        r.innerHTML='<span class="tag">'+c+'</span><span class="hk">'+h.t.replace(/</g,"&lt;")+'</span>';
+        var b=document.createElement("button");b.className="use";b.textContent="ใช้อันนี้";
+        b.onclick=function(){go("chat");quick('ช่วยเขียนสคริปต์รีลสั้น + แคปชัน + แฮชแท็ก จาก hook นี้ให้รีสอร์ท: "'+h.t+'"');};
+        r.appendChild(b);el.appendChild(r);
+      });
+    });
+  }
+  // ---- เทรนด์/โอกาส (ตามเดือน) ----
+  var nowM=new Date().getMonth()+1;
+  var TRENDS=[
+    {em:"💐",t:"วันแม่ 12 ส.ค.",d:"แพ็กพาแม่มาพักผ่อน / คอนเทนต์ครอบครัวอบอุ่น",m:[8]},
+    {em:"🌧️",t:"หน้าฝนโรแมนติก",d:"ฝนตกริมน้ำ จิบกาแฟอุ่นๆ ฟีลชิลสุดๆ",m:[6,7,8,9,10]},
+    {em:"🍃",t:"Low season คนน้อย เงียบสงบ",d:"ช่วงราคาดี เหมาะพักผ่อนจริงจัง ธรรมชาติเขียว",m:[5,6,7,8,9]},
+    {em:"❤️",t:"วันวาเลนไทน์ คู่รัก",d:"แพ็กคู่รัก ดินเนอร์ริมน้ำ เซอร์ไพรส์",m:[2]},
+    {em:"💦",t:"สงกรานต์ หนีร้อนริมน้ำ",d:"เล่นน้ำ คลายร้อน หยุดยาวพาครอบครัวมา",m:[4]},
+    {em:"❄️",t:"หน้าหนาว ธรรมชาติสวย",d:"อากาศเย็นสบาย หมอกยามเช้า วิวภูเขา",m:[11,12,1,2]},
+    {em:"🎊",t:"ปีใหม่ เคาท์ดาวน์",d:"แพ็กฉลองปีใหม่ริมน้ำ จองล่วงหน้า",m:[12,1]},
+    {em:"👨‍👩‍👧",t:"วันพ่อ 5 ธ.ค.",d:"พาพอครอบครัวมาพักผ่อน วันหยุดยาว",m:[12]},
+    {em:"🏖️",t:"หนีเมืองสุดสัปดาห์",d:"เสาร์-อาทิตย์นี้ไปไหนดี แพ็ก 2วัน1คืน",m:null},
+    {em:"🌿",t:"เที่ยวเชิงธรรมชาติ แก่งกระจาน",d:"ล่องแพ ดูธรรมชาติ อากาศบริสุทธิ์",m:null},
+    {em:"👥",t:"กรุ๊ป/หมู่คณะ/สัมมนา",d:"รับจัดกรุ๊ป ทีมบิลดิ้ง ครอบครัวใหญ่",m:null},
+    {em:"📸",t:"มุมถ่ายรูปเด็ด",d:"สปอตถ่ายรูปสวยในรีสอร์ท ลงไอจีปัง",m:null}
+  ];
+  function renderTrends(){
+    var el=document.getElementById("trendList");el.innerHTML="";
+    TRENDS.filter(function(x){return !x.m||x.m.indexOf(nowM)>=0;}).forEach(function(x){
+      var d=document.createElement("div");d.className="trendcard";
+      d.innerHTML='<div class="em">'+x.em+'</div><b>'+x.t+'</b><p>'+x.d+'</p>';
+      var b=document.createElement("button");b.className="use";b.textContent="ทำคอนเทนต์ →";
+      b.onclick=function(){go("chat");quick('ช่วยคิดไอเดียคอนเทนต์ + สคริปต์รีล สำหรับโอกาส "'+x.t+'" ('+x.d+') ให้รีสอร์ท พร้อมแคปชัน');};
+      d.appendChild(b);el.appendChild(d);
+    });
+  }
+  // ---- วิเคราะห์โพสต์ (แคปรูป Insights) ----
+  var anImg=null;
+  function anPick(inp){var f=inp.files&&inp.files[0];if(!f)return;
+    var rd=new FileReader();rd.onload=function(){var im=new Image();im.onload=function(){
+      var max=1400,w=im.width,h=im.height;if(w>max||h>max){var s=Math.min(max/w,max/h);w=Math.round(w*s);h=Math.round(h*s);}
+      var cv=document.createElement("canvas");cv.width=w;cv.height=h;cv.getContext("2d").drawImage(im,0,0,w,h);
+      anImg=cv.toDataURL("image/jpeg",0.85);
+      document.getElementById("anThumb").innerHTML='<img src="'+anImg+'">';
+    };im.src=rd.result;};rd.readAsDataURL(f);inp.value="";}
+  window.anPick=anPick;
+  async function analyze(){var msg=document.getElementById("anMsg"),res=document.getElementById("anResult");
+    if(!anImg){msg.style.color="var(--wait)";msg.textContent="อัปรูป Insights ก่อนนะคะ";return;}
+    var btn=document.querySelector("#sec-analytics .stgo");btn.disabled=true;msg.style.color="var(--muted)";msg.textContent="น้องกำลังอ่านรูป...";
+    res.innerHTML='<div class="empty-note">น้องกำลังวิเคราะห์... 📊</div>';
+    try{var j=await api("analyze",{method:"POST",body:JSON.stringify({image:anImg,note:document.getElementById("anNote").value.trim()})});
+      if(j&&j.text){res.textContent=j.text;msg.textContent="";
+        var sv=document.createElement("button");sv.className="save";sv.style.position="static";sv.style.marginTop="10px";sv.textContent="💾 เก็บเข้าคลังไอเดีย";sv.onclick=function(){saveLib(j.text);sv.textContent="✓ เก็บแล้ว";sv.disabled=true;};res.appendChild(sv);
+      }else{res.innerHTML='';msg.style.color="var(--wait)";msg.textContent="วิเคราะห์ไม่สำเร็จ: "+((j&&j.error)||"ลองใหม่นะคะ");}
+    }catch(e){msg.style.color="var(--wait)";msg.textContent="เชื่อมต่อไม่ได้ ลองใหม่ค่ะ";}
+    btn.disabled=false;}
+  window.analyze=analyze;
+
   // เริ่มระบบ (ตัวแปร/ฟังก์ชันทั้งหมดพร้อมแล้ว)
+  renderHooks();renderTrends();
   if(pass())showApp();
 </script>
 </body>

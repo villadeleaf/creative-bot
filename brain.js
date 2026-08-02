@@ -110,4 +110,30 @@ async function imagePrompt(thaiRequest) {
   return block ? block.text.trim().replace(/^["']+|["']+$/g, "") : String(thaiRequest || "");
 }
 
-module.exports = { generateReply, imagePrompt, MODEL };
+// ---- วิเคราะห์รูปหน้า Insights (Claude vision) ----
+async function analyzeImage(dataUrl, note) {
+  const m = /^data:(image\/[\w.+-]+);base64,(.+)$/.exec(dataUrl || "");
+  if (!m) throw new Error("bad image");
+  const res = await client.messages.create({
+    model: MODEL,
+    max_tokens: 1500,
+    system:
+      "คุณคือ 'น้องครีเอทีฟ' นักการตลาดคอนเทนต์รีสอร์ท Villa de Leaf ช่วยอ่านภาพหน้า Insights/สถิติโซเชียล (IG/FB/TikTok) ที่ทีมแคปมา แล้ววิเคราะห์ให้ทีมงานภายในเข้าใจง่าย " +
+      "ภาษาไทย ลงท้าย ค่ะ/คะ ห้ามใช้ markdown — เขียนข้อความธรรมดา จัดหัวข้อด้วยอิโมจินำ + บรรทัดว่าง. " +
+      "โครง: 📊 สรุปตัวเลขเด่นที่เห็น · 🔥 โพสต์/คอนเทนต์ไหนปังหรือแป้ก · 💡 ควรทำอะไรต่อ (แนวคอนเทนต์/เวลาโพสต์/สิ่งที่ควรปรับ) ให้ตรงประเด็น ใช้ได้จริงทันที. " +
+      "ถ้าตัวเลขในรูปอ่านไม่ชัด บอกตรงๆ ว่าอ่านไม่ชัดตรงไหน ห้ามเดาตัวเลขเอง.",
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: m[1], data: m[2] } },
+          { type: "text", text: (note ? "คำถามเพิ่มเติมจากทีม: " + note + "\n\n" : "") + "ช่วยวิเคราะห์หน้า Insights นี้ให้หน่อยค่ะ" },
+        ],
+      },
+    ],
+  });
+  const block = res.content.find((b) => b.type === "text");
+  return block ? block.text.trim() : "";
+}
+
+module.exports = { generateReply, imagePrompt, analyzeImage, MODEL };
