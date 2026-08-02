@@ -342,6 +342,12 @@ if (SELF_URL) {
     fetch(`${SELF_URL}/health`)
       .then(() => console.log("keep-alive ✓"))
       .catch((e) => console.log("keep-alive x:", e.message));
+    // ปลุก Supabase ด้วย (โปรเจกต์ฟรีพักเครื่องถ้าไม่มีใครแตะ ~1 สัปดาห์)
+    if (SB_ON) {
+      sb("calendar?select=id&limit=1")
+        .then(() => console.log("db-alive ✓"))
+        .catch((e) => console.log("db-alive x:", e.message));
+    }
   }, KEEPALIVE_MS);
   console.log(`keep-alive เปิดใช้งาน: ปลุกทุก 10 นาที (${SELF_URL})`);
 }
