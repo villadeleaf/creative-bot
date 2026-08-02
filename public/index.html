@@ -11,7 +11,7 @@
     --accent:#B5654A; --accent-soft:#EFE1D8;
     --data:#F7EAEA; --data-line:#E7CFCF; --content:#E9F2EC; --content-line:#CFE3D5;
     --ads:#F6EFDD; --ads-line:#E6D6B8; --line:#E7DECF;
-    --shadow:0 6px 20px rgba(120,90,60,.07); --ok:#2E7D6B; --wait:#B5654A; --botbg:#2E7D6B;
+    --shadow:0 6px 20px rgba(120,90,60,.07); --ok:#2E7D6B; --wait:#B5654A; --soon:#C88A2E; --botbg:#2E7D6B;
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
@@ -67,7 +67,13 @@
   @media(max-width:640px){.core{grid-template-columns:repeat(2,1fr)}}
   .core .cell{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 10px;text-align:center;box-shadow:var(--shadow)}
   .core .cell .i{font-size:16px;color:var(--accent)} .core .cell b{display:block;margin-top:5px;font-size:13px}
-  .core .cell span{font-size:9.5px;letter-spacing:.08em;color:var(--muted)}
+  .core .cell span.mono{font-size:9.5px;letter-spacing:.08em;color:var(--muted)}
+  .core .cell{cursor:pointer;position:relative;transition:transform .12s,border-color .12s}
+  .core .cell:hover{transform:translateY(-2px);border-color:var(--accent)}
+  .core .cell .qm{position:absolute;top:6px;right:7px;width:15px;height:15px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:9px;font-weight:800;display:grid;place-items:center}
+  .core .cell .cdot{display:block;width:6px;height:6px;border-radius:50%;margin:6px auto 0}
+  .cdot.ok{background:var(--ok)}.cdot.soon{background:var(--soon)}.cdot.mix{background:linear-gradient(90deg,var(--ok) 50%,var(--wait) 50%)}
+  .pop .badge.ok{background:#DDEEE8;color:var(--ok)}.pop .badge.soon{background:#F6E9CE;color:var(--soon)}
   .cols{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:8px}
   @media(max-width:780px){.cols{grid-template-columns:1fr}}
   .col{border-radius:15px;padding:12px;box-shadow:var(--shadow)}
@@ -189,10 +195,10 @@
           <p class="psub">กดกล่อง 🟢 เพื่อเริ่มใช้งานจริง (แชทได้เลย) · 🔴 = ต่อข้อมูลเฟสหลัง</p>
           <div class="band"><div class="label mono">CORE · สมองของระบบ</div>
             <div class="core">
-              <div class="cell"><div class="i">✦</div><b>Claude</b><span class="mono">ORCHESTRATION</span></div>
-              <div class="cell"><div class="i">▤</div><b>คลังความรู้รีสอร์ท</b><span class="mono">ROOMS·PRICE·KM</span></div>
-              <div class="cell"><div class="i">◷</div><b>Always-On</b><span class="mono">ทุกเช้า 07:00</span></div>
-              <div class="cell"><div class="i">⇄</div><b>Connectors</b><span class="mono">LINE·FB·IG·TT</span></div>
+              <div class="cell" data-badge="ok" data-t="Claude — สมองของระบบ" data-desc="ใช้ Claude (claude-sonnet-5) เป็นสมองคิดแคปชัน ไอเดีย สคริปต์คลิป แคมเปญ ให้จริง — ทำงานอยู่แล้วในหน้า 'คุยกับน้องครีเอทีฟ' ค่ะ"><span class="qm">?</span><div class="i">✦</div><b>Claude</b><span class="mono">ORCHESTRATION</span><span class="cdot ok"></span></div>
+              <div class="cell" data-badge="ok" data-t="คลังความรู้รีสอร์ท" data-desc="น้องจำข้อมูล Villa de Leaf ได้หมด — 6 ห้องพร้อมราคา จุดขาย กิจกรรม ระยะทาง ฤดูกาล เอามาใช้ตอบทุกครั้ง ไม่ต้องบอกซ้ำ ทำงานจริงแล้วค่ะ"><span class="qm">?</span><div class="i">▤</div><b>คลังความรู้รีสอร์ท</b><span class="mono">ROOMS·PRICE·KM</span><span class="cdot ok"></span></div>
+              <div class="cell" data-badge="soon" data-t="Always-On — ทุกเช้า 07:00" data-desc="ให้น้องส่งไอเดีย/แผนคอนเทนต์ให้ทีมทุกเช้าอัตโนมัติ โดยไม่ต้องเปิดเอง — โครงพร้อมแล้ว เปิดใช้เฟสถัดไปค่ะ"><span class="qm">?</span><div class="i">◷</div><b>Always-On</b><span class="mono">ทุกเช้า 07:00</span><span class="cdot soon"></span></div>
+              <div class="cell" data-badge="mix" data-t="Connectors — ต่อระบบอื่น" data-desc="ช่องต่อระบบเฮียโอ๊ค (/ask) พร้อมใช้แล้ว 🟢 · ส่วนดึงข้อมูล/โพสต์ไป FB·IG·TikTok ต้องขอ API จาก Meta ก่อน 🔴 เป็นเฟสถัดไปค่ะ"><span class="qm">?</span><div class="i">⇄</div><b>Connectors</b><span class="mono">LINE·FB·IG·TT</span><span class="cdot mix"></span></div>
             </div>
           </div>
           <div class="cols">
@@ -259,7 +265,7 @@
 </div>
 
 <!-- POPUP -->
-<div class="pop" id="pop"><div class="box"><div class="badge">⏳ ต้องต่อข้อมูลเพิ่ม (เฟสหลัง)</div><h3 id="popT"></h3><p id="popP"></p><button onclick="pop.classList.remove('on')">เข้าใจแล้ว</button></div></div>
+<div class="pop" id="pop"><div class="box"><div class="badge" id="popB">⏳ ต้องต่อข้อมูลเพิ่ม (เฟสหลัง)</div><h3 id="popT"></h3><p id="popP"></p><button onclick="pop.classList.remove('on')">เข้าใจแล้ว</button></div></div>
 
 <script>
   var KEY_PASS="nc_pass",KEY_UID="nc_uid",KEY_LIB="nc_lib",KEY_CAL="nc_cal";
@@ -294,10 +300,22 @@
   document.querySelectorAll(".nav a").forEach(function(a){a.addEventListener("click",function(){go(a.dataset.sec);});});
   function toggleSide(open){document.getElementById("side").classList.toggle("open",open);document.getElementById("scrim").classList.toggle("on",open);}
 
+  // ---- popup อธิบายสถานะ ----
+  function openPop(t,desc,badge){
+    var m={ok:["🟢 ใช้งานได้จริงแล้ว","ok"],soon:["🟡 พร้อมเปิดเฟสถัดไป","soon"],
+           mix:["🟢 พร้อมบางส่วน · 🔴 บางส่วนเฟสหลัง","soon"],wait:["⏳ ต้องต่อข้อมูลเพิ่ม (เฟสหลัง)",""]}[badge||"wait"];
+    var b=document.getElementById("popB");b.textContent=m[0];b.className="badge "+m[1];
+    document.getElementById("popT").textContent=t;document.getElementById("popP").textContent=desc;
+    pop.classList.add("on");
+  }
+  // ---- กล่อง CORE (กดดูสถานะจริง) ----
+  document.querySelectorAll(".core .cell").forEach(function(el){el.addEventListener("click",function(){
+    openPop(el.dataset.t,el.dataset.desc,el.dataset.badge);
+  });});
   // ---- home cards ----
   document.querySelectorAll(".item").forEach(function(el){el.addEventListener("click",function(){
     if(el.dataset.s==="ok"){go("chat");if(el.dataset.prompt)quick(el.dataset.prompt);}
-    else{document.getElementById("popT").textContent=el.dataset.t;document.getElementById("popP").textContent=el.dataset.desc;pop.classList.add("on");}
+    else{openPop(el.dataset.t,el.dataset.desc,"wait");}
   });});
   pop.addEventListener("click",function(e){if(e.target===this)this.classList.remove("on");});
 
