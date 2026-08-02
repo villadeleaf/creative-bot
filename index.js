@@ -8,20 +8,48 @@
 //   - GET  /selftest  เช็คระบบ
 // ============================================================
 
-const express = require("express");
 const path = require("path");
-const { generateReply, MODEL } = require("./brain");
+try { require("dotenv").config({ path: path.join(__dirname, ".env") }); } catch (e) {} // โหลด .env ตอนรัน local (บน Render ใช้ env จาก dashboard)
+
+const express = require("express");
+const { generateReply, imagePrompt, MODEL } = require("./brain");
 
 const app = express();
 const PORT = process.env.PORT || 3100;
 const ASK_SECRET = (process.env.ASK_SECRET || "").trim();
 const TEAM_PASSWORD = (process.env.TEAM_PASSWORD || "").trim(); // รหัสให้ทีมล็อกอินหน้าเว็บ
+const OPENAI_KEY = (process.env.OPENAI_API_KEY || "").trim(); // สำหรับแก้รูปจริง (gpt-image-1)
 const MAX_TURNS = 20;
+
+// ---- ฐานข้อมูลกลาง Supabase (ปฏิทิน+คลังไอเดีย แชร์กันทั้งทีม) ----
+const SUPABASE_URL = (process.env.SUPABASE_URL || "").trim().replace(/\/$/, "");
+const SUPABASE_KEY = (process.env.SUPABASE_SERVICE_KEY || "").trim();
+const SB_ON = !!(SUPABASE_URL && SUPABASE_KEY);
+async function sb(pathq, opts = {}) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${pathq}`, {
+    ...opts,
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      "content-type": "application/json",
+      ...(opts.headers || {}),
+    },
+  });
+  if (!r.ok) throw new Error(`supabase ${r.status}: ${await r.text()}`);
+  const t = await r.text();
+  return t ? JSON.parse(t) : null;
+}
 
 const conversations = new Map();
 
+// ---- ตรวจรหัสทีม (ใช้กับทุก endpoint ของหน้าเว็บ) ----
+function teamOK(req) {
+  return TEAM_PASSWORD && (req.headers["x-team-pass"] || "") === TEAM_PASSWORD;
+}
+
 // ---- เสิร์ฟหน้าเว็บ (public/) ----
 app.use(express.static(path.join(__dirname, "public")));
+app.use(express.json({ limit: "12mb" })); // เผื่อรูปที่อัปมาแก้ (base64)
 
 // ---- เช็คสุขภาพ (ไม่เรียก AI) ----
 app.get("/health", (_req, res) => res.send("น้องครีเอทีฟ 🎨 พร้อมทำงานค่ะ"));
@@ -32,11 +60,13 @@ app.get("/selftest", (req, res) => {
   }
   const rawKey = process.env.ANTHROPIC_API_KEY || "";
   res.json({
-    version: "v3-keepalive",
+    version: "v4-db-image",
     model: MODEL,
     keyRawLen: rawKey.length,
     keyCleanLen: rawKey.replace(/[^A-Za-z0-9_-]/g, "").length,
     teamLogin: TEAM_PASSWORD ? "on" : "off",
+    db: SB_ON ? "on" : "off",
+    editImage: OPENAI_KEY ? "on" : "off",
     conversations: conversations.size,
   });
 });
@@ -103,8 +133,112 @@ app.post("/ask", express.json({ limit: "256kb" }), async (req, res) => {
   return res.json({ reply: clean });
 });
 
+// ============================================================
+//  API หน้าเว็บ (ต้องล็อกอิน = ส่ง x-team-pass) — ข้อมูลแชร์กันทั้งทีมผ่าน Supabase
+// ============================================================
+
+// ---- ปฏิทินคอนเทนต์ ----
+app.get("/api/calendar", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!SB_ON) return res.json({ rows: [], nodb: true });
+  try {
+    const rows = await sb("calendar?select=id,d,txt&order=d.asc,id.asc");
+    res.json({ rows });
+  } catch (e) { console.error("calendar get:", e.message); res.status(500).json({ error: "db" }); }
+});
+app.post("/api/calendar", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!SB_ON) return res.status(503).json({ error: "nodb" });
+  const { d, txt } = req.body || {};
+  if (!d || !txt) return res.status(400).json({ error: "d and txt required" });
+  try {
+    const row = await sb("calendar", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ d: String(d), txt: String(txt).slice(0, 500) }) });
+    res.json({ row: Array.isArray(row) ? row[0] : row });
+  } catch (e) { console.error("calendar post:", e.message); res.status(500).json({ error: "db" }); }
+});
+app.delete("/api/calendar", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!SB_ON) return res.status(503).json({ error: "nodb" });
+  const id = parseInt(req.query.id, 10);
+  if (!id) return res.status(400).json({ error: "id required" });
+  try { await sb(`calendar?id=eq.${id}`, { method: "DELETE" }); res.json({ ok: true }); }
+  catch (e) { console.error("calendar del:", e.message); res.status(500).json({ error: "db" }); }
+});
+
+// ---- คลังไอเดีย ----
+app.get("/api/ideas", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!SB_ON) return res.json({ rows: [], nodb: true });
+  try {
+    const rows = await sb("ideas?select=id,txt&order=id.desc");
+    res.json({ rows });
+  } catch (e) { console.error("ideas get:", e.message); res.status(500).json({ error: "db" }); }
+});
+app.post("/api/ideas", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!SB_ON) return res.status(503).json({ error: "nodb" });
+  const { txt } = req.body || {};
+  if (!txt) return res.status(400).json({ error: "txt required" });
+  try {
+    const row = await sb("ideas", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ txt: String(txt).slice(0, 4000) }) });
+    res.json({ row: Array.isArray(row) ? row[0] : row });
+  } catch (e) { console.error("ideas post:", e.message); res.status(500).json({ error: "db" }); }
+});
+app.delete("/api/ideas", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!SB_ON) return res.status(503).json({ error: "nodb" });
+  const id = parseInt(req.query.id, 10);
+  if (!id) return res.status(400).json({ error: "id required" });
+  try { await sb(`ideas?id=eq.${id}`, { method: "DELETE" }); res.json({ ok: true }); }
+  catch (e) { console.error("ideas del:", e.message); res.status(500).json({ error: "db" }); }
+});
+
+// ---- เจนรูป AI (ฟรี ผ่าน Pollinations) — น้องแปลงคำขอไทยเป็น prompt ภาพก่อน ----
+app.post("/api/image", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  const { message } = req.body || {};
+  if (!message) return res.status(400).json({ error: "message required" });
+  let prompt;
+  try { prompt = await imagePrompt(message); }
+  catch (e) { console.error("imagePrompt:", e.message); prompt = String(message); }
+  const seed = Math.floor(Math.random() * 1e6);
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${seed}`;
+  res.json({ url, prompt });
+});
+
+// ---- แก้รูปจริงตามคำสั่ง (OpenAI gpt-image-1) — อัปรูปจริง แล้วสั่งแก้ ----
+app.post("/api/edit-image", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!OPENAI_KEY) return res.status(503).json({ error: "ยังไม่ได้ตั้งค่า OpenAI (แก้รูปจริงยังใช้ไม่ได้)" });
+  const { image, message } = req.body || {};
+  if (!image || !message) return res.status(400).json({ error: "image and message required" });
+  const m = /^data:(image\/[\w.+-]+);base64,(.+)$/.exec(image);
+  if (!m) return res.status(400).json({ error: "รูปไม่ถูกต้อง" });
+  try {
+    const mime = m[1], buf = Buffer.from(m[2], "base64"), ext = (mime.split("/")[1] || "png").replace(/[^a-z0-9]/gi, "");
+    const form = new FormData();
+    form.append("model", "gpt-image-1");
+    form.append("image", new Blob([buf], { type: mime }), `photo.${ext}`);
+    form.append("prompt", String(message).slice(0, 1000));
+    form.append("size", "1024x1024");
+    const r = await fetch("https://api.openai.com/v1/images/edits", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${OPENAI_KEY}` },
+      body: form,
+    });
+    const j = await r.json();
+    if (!r.ok) {
+      console.error("openai edit:", r.status, JSON.stringify(j).slice(0, 300));
+      return res.status(502).json({ error: (j.error && j.error.message) || "แก้รูปไม่สำเร็จ" });
+    }
+    const b64 = j.data && j.data[0] && j.data[0].b64_json;
+    if (!b64) return res.status(502).json({ error: "ไม่ได้รูปกลับมา" });
+    res.json({ url: `data:image/png;base64,${b64}` });
+  } catch (e) { console.error("edit-image:", e.message); res.status(500).json({ error: "ระบบขัดข้อง" }); }
+});
+
 app.listen(PORT, () => {
-  console.log(`น้องครีเอทีฟ 🎨 (${MODEL}) รันอยู่ที่พอร์ต ${PORT}`);
+  console.log(`น้องครีเอทีฟ 🎨 (${MODEL}) รันอยู่ที่พอร์ต ${PORT} · DB:${SB_ON ? "on" : "off"} · แก้รูป:${OPENAI_KEY ? "on" : "off"}`);
 });
 
 // ---- กันเว็บหลับ: ปลุกตัวเองทุก 10 นาที (free tier หลับหลังไม่มีคนใช้ 15 นาที) ----

@@ -43,8 +43,9 @@ const SYSTEM_PROMPT = `คุณคือ "น้องครีเอทีฟ"
 7. 🔍 ช่วยคิดมุมตอบเทรนด์ — ถ้าทีมเล่าเทรนด์/เพลง/มีมที่กำลังดัง ช่วยดัดให้เข้ากับรีสอร์ทแบบไม่ฝืน
 
 ความจริงใจเรื่องขีดจำกัด (ห้ามโม้):
-- น้อง "สร้างรูป/ตัดวิดีโอเองไม่ได้" ในแชทนี้ — บอกตรงๆ แล้วสอนวิธีทำด้วย Canva/CapCut/มือถือแทน (ฟีเจอร์สร้างรูปด้วย AI จะเพิ่มในเฟสถัดไป)
-- หลักคิดที่ต้องยึดและแนะนำทีมเสมอ: รูป/คลิปถ่ายจริงจากมือถือ ชนะรูป AI สำหรับธุรกิจรีสอร์ท เพราะลูกค้าจองจากความเชื่อใจว่า "ของจริงเป็นแบบนี้"
+- น้อง "เจนรูป AI ได้แล้ว" — ให้ทีมกดปุ่ม 🎨 วาดรูป ใต้ช่องแชท แล้วพิมพ์บอกว่าอยากได้ภาพแบบไหน (ใช้ทำภาพ mood/ไอเดีย/ภาพประกอบโพสต์)
+- น้องยัง "ตัดวิดีโอเองในแชทไม่ได้" — สอนวิธีทำด้วย CapCut/มือถือแทน
+- หลักคิดที่ต้องแนะนำทีมเสมอ: รูป/คลิปถ่ายจริงจากมือถือ ชนะรูป AI สำหรับ "ภาพห้อง/ราคา/รีวิว" เพราะลูกค้าจองจากความเชื่อใจว่าของจริงเป็นแบบนี้ — ส่วนรูป AI เหมาะกับภาพ mood/ไอเดีย/แบ็กกราวด์
 
 กติกาข้อมูล (สำคัญมาก — ห้ามพลาด):
 - ใช้ข้อมูลจริงจากคลังความรู้ด้านล่างเท่านั้น: ชื่อห้อง ราคา กิจกรรม เมนู ระยะทาง — ห้ามแต่งตัวเลข/เมนู/รีวิว/สถิติเองเด็ดขาด
@@ -93,4 +94,20 @@ async function generateReply(history) {
   return block ? block.text.trim() : "";
 }
 
-module.exports = { generateReply, MODEL };
+// ---- แปลงคำขอภาษาไทย → prompt ภาพภาษาอังกฤษ (สำหรับเจนรูป AI) ----
+async function imagePrompt(thaiRequest) {
+  const res = await client.messages.create({
+    model: MODEL,
+    max_tokens: 250,
+    system:
+      "Turn the user's Thai content/marketing request into ONE concise English text-to-image prompt. " +
+      "Output ONLY the prompt — no explanation, no quotes, no Thai. " +
+      "Default subject = Villa de Leaf River, a riverside tropical resort near Kaeng Krachan (nature, river, pool villas, warm cozy vibe) unless the user clearly wants something else. " +
+      "Always append style words: photorealistic, cinematic lighting, high detail, professional photography, vibrant. Keep it under 55 words.",
+    messages: [{ role: "user", content: String(thaiRequest || "") }],
+  });
+  const block = res.content.find((b) => b.type === "text");
+  return block ? block.text.trim().replace(/^["']+|["']+$/g, "") : String(thaiRequest || "");
+}
+
+module.exports = { generateReply, imagePrompt, MODEL };

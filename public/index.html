@@ -103,6 +103,17 @@
   .bar textarea{flex:1;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:10px 12px;font-size:14px;resize:none;max-height:110px;line-height:1.4;color:var(--ink)}
   .bar button{border:none;background:var(--accent);color:#fff;border-radius:12px;padding:0 18px;font-weight:800;font-size:14px;cursor:pointer}
   .bar button:disabled{opacity:.5}
+  .bar .draw{background:var(--content);border:1px solid var(--content-line);padding:0 13px;font-size:18px}
+  .bar #file{display:none}
+  .attachbar{display:none;align-items:center;gap:9px;background:var(--content);border:1px solid var(--content-line);border-radius:12px;padding:7px 9px;margin-bottom:6px;font-size:12px;color:var(--muted)}
+  .attachbar.on{display:flex}
+  .attachbar img{width:38px;height:38px;object-fit:cover;border-radius:8px;flex:none}
+  .attachbar span{flex:1;line-height:1.35}
+  .attachbar button{border:none;background:transparent;color:var(--muted);font-size:16px;cursor:pointer;padding:0 4px}
+  .msg img{display:block;max-width:100%;border-radius:12px;margin-top:2px}
+  .msg.you img{max-width:180px}
+  .msg .cap{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5}
+  .msg .cap a{color:var(--accent);font-weight:700;text-decoration:none}
 
   /* calendar */
   .calhead{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
@@ -222,15 +233,23 @@
         <section class="sec" id="sec-chat">
           <div class="chatwrap">
             <div class="stream" id="stream">
-              <div class="msg bot">สวัสดีค่ะ! น้องครีเอทีฟพร้อมช่วยแล้วค่ะ 🎨 พิมพ์บอกได้เลย หรือกดปุ่มลัดด้านล่างค่ะ</div>
+              <div class="msg bot">สวัสดีค่ะ! น้องครีเอทีฟพร้อมช่วยแล้วค่ะ 🎨 พิมพ์บอกได้เลย · อยากได้รูปให้พิมพ์บอกแล้วกดปุ่ม 🎨 น้องวาดให้ได้ค่ะ</div>
             </div>
             <div class="chips">
               <div class="chip" onclick="quick('ช่วยคิดแคปชันโปรโมทห้อง Pool Villa พร้อมแฮชแท็ก')">แคปชัน Pool Villa</div>
               <div class="chip" onclick="quick('อาทิตย์นี้ควรโพสต์อะไรบ้าง')">แผนโพสต์อาทิตย์นี้</div>
               <div class="chip" onclick="quick('ขอสคริปต์คลิป TikTok โปรโมทล่องเรือยาง')">สคริปต์คลิป</div>
             </div>
+            <div id="attachBar" class="attachbar">
+              <img id="attachThumb" alt="">
+              <span>รูปจริงแนบแล้ว · พิมพ์บอกว่าจะแก้ยังไง แล้วกด "แก้รูป"</span>
+              <button onclick="clearAttach()">✕</button>
+            </div>
             <div class="bar">
+              <input type="file" id="file" accept="image/*" onchange="onFile(this)">
               <textarea id="input" rows="1" placeholder="พิมพ์บอกน้องครีเอทีฟ..."></textarea>
+              <button class="draw" onclick="document.getElementById('file').click()" title="อัปรูปจริงมาแก้">📎</button>
+              <button id="draw" class="draw" onclick="genImage()" title="ให้น้องวาดรูป AI">🎨</button>
               <button id="send" onclick="send()">ส่ง</button>
             </div>
           </div>
@@ -239,7 +258,7 @@
         <!-- CALENDAR -->
         <section class="sec" id="sec-calendar">
           <h2 class="page">ปฏิทินคอนเทนต์</h2>
-          <p class="psub">วางแผนโพสต์ทั้งเดือน · กดวันเพื่อเพิ่มโพสต์ · บันทึกบนเครื่องนี้</p>
+          <p class="psub">วางแผนโพสต์ทั้งเดือน · กดวันเพื่อเพิ่มโพสต์ · แชร์กันทั้งทีม ☁️</p>
           <div class="calhead">
             <div class="nav2"><button onclick="calMove(-1)">‹</button><button onclick="calMove(1)">›</button></div>
             <b id="calLabel"></b>
@@ -272,6 +291,13 @@
   function uid(){var u=localStorage.getItem(KEY_UID);if(!u){u="web-"+Math.random().toString(36).slice(2,10);localStorage.setItem(KEY_UID,u);}return u;}
   function pass(){return localStorage.getItem(KEY_PASS)||"";}
   var pop=document.getElementById("pop");
+  // ---- ตัวช่วยเรียก API (แนบรหัสทีม + จัดการ 401) ----
+  async function api(path,opts){opts=opts||{};
+    opts.headers=Object.assign({"content-type":"application/json","x-team-pass":pass()},opts.headers||{});
+    var r=await fetch("/api/"+path,opts);
+    if(r.status===401){localStorage.removeItem(KEY_PASS);location.reload();throw new Error("401");}
+    return r.json();
+  }
 
   // ---- login ----
   async function doLogin(){
@@ -286,7 +312,7 @@
   }
   document.getElementById("pw").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
   function logout(){localStorage.removeItem(KEY_PASS);location.reload();}
-  function showApp(){document.getElementById("login").style.display="none";document.getElementById("app").style.display="block";renderCal();renderLib();}
+  function showApp(){document.getElementById("login").style.display="none";document.getElementById("app").style.display="block";loadCal();loadLib();}
 
   // ---- nav ----
   var titles={home:"หน้าหลัก",chat:"คุยกับน้องครีเอทีฟ",calendar:"ปฏิทินคอนเทนต์",library:"คลังไอเดีย",analytics:"Analytics",ads:"Ads FB/IG"};
@@ -327,7 +353,43 @@
   function addMsg(text,who){var d=document.createElement("div");d.className="msg "+who;d.textContent=text;
     if(who==="bot"&&text&&text!=="กำลังคิด..."){var b=document.createElement("button");b.className="save";b.textContent="💾 เก็บ";b.onclick=function(){saveLib(text);b.textContent="✓ เก็บแล้ว";b.disabled=true;};d.appendChild(b);}
     stream.appendChild(d);stream.scrollTop=stream.scrollHeight;return d;}
+  // ---- อัปรูปจริงมาแก้ ----
+  var pendingImg=null;
+  function onFile(inp){var f=inp.files&&inp.files[0];if(!f)return;
+    var rd=new FileReader();
+    rd.onload=function(){var im=new Image();im.onload=function(){
+      var max=1024,w=im.width,h=im.height;if(w>max||h>max){var s=Math.min(max/w,max/h);w=Math.round(w*s);h=Math.round(h*s);}
+      var cv=document.createElement("canvas");cv.width=w;cv.height=h;cv.getContext("2d").drawImage(im,0,0,w,h);
+      pendingImg=cv.toDataURL("image/png");
+      document.getElementById("attachThumb").src=pendingImg;
+      document.getElementById("attachBar").classList.add("on");
+      document.getElementById("send").textContent="แก้รูป";
+      input.placeholder="บอกว่าจะแก้ยังไง เช่น เปลี่ยนท้องฟ้าเป็นตอนเย็น / ใส่ข้อความโปรโมท";input.focus();
+    };im.src=rd.result;};
+    rd.readAsDataURL(f);inp.value="";
+  }
+  function clearAttach(){pendingImg=null;document.getElementById("attachBar").classList.remove("on");
+    document.getElementById("send").textContent="ส่ง";document.getElementById("file").value="";
+    input.placeholder="พิมพ์บอกน้องครีเอทีฟ...";}
+  function addUserImg(url,text){var d=document.createElement("div");d.className="msg you";
+    var img=document.createElement("img");img.src=url;d.appendChild(img);
+    if(text){var c=document.createElement("div");c.className="cap";c.style.color="inherit";c.textContent=text;d.appendChild(c);}
+    stream.appendChild(d);stream.scrollTop=stream.scrollHeight;}
+  async function editImage(t){
+    if(!t){input.placeholder="พิมพ์บอกก่อนว่าจะแก้ยังไงค่ะ";input.focus();return;}
+    var img=pendingImg;input.value="";input.style.height="auto";addUserImg(img,t);clearAttach();
+    var sb=document.getElementById("send"),db=document.getElementById("draw");sb.disabled=true;db.disabled=true;
+    var loading=addMsg("กำลังแก้รูปให้ค่ะ รอสักครู่นะคะ... 🖌️","bot");function done(){sb.disabled=false;db.disabled=false;}
+    try{
+      var j=await api("edit-image",{method:"POST",body:JSON.stringify({image:img,message:t})});
+      if(j&&j.url){var im=new Image();im.onload=function(){loading.remove();addImg(j.url,"แก้ตามสั่ง: "+t);done();};
+        im.onerror=function(){loading.textContent="แสดงรูปไม่ได้ ลองใหม่ค่ะ 🙏";done();};im.src=j.url;}
+      else{loading.textContent="แก้รูปไม่สำเร็จ: "+((j&&j.error)||"ลองใหม่นะคะ");done();}
+    }catch(e){loading.textContent="เชื่อมต่อไม่ได้ ลองใหม่ค่ะ 🙏";done();}
+  }
+
   async function send(){
+    if(pendingImg)return editImage(input.value.trim());
     var t=input.value.trim();if(!t)return;input.value="";input.style.height="auto";addMsg(t,"you");
     var btn=document.getElementById("send");btn.disabled=true;var loading=addMsg("กำลังคิด...","bot");
     try{var r=await fetch("/chat",{method:"POST",headers:{"content-type":"application/json","x-team-pass":pass()},body:JSON.stringify({userId:uid(),message:t})});
@@ -337,37 +399,75 @@
     btn.disabled=false;
   }
 
-  // ---- library ----
-  function getLib(){try{return JSON.parse(localStorage.getItem(KEY_LIB)||"[]");}catch(e){return [];}}
-  function saveLib(text){var l=getLib();l.unshift({t:text,at:Date.now()});localStorage.setItem(KEY_LIB,JSON.stringify(l.slice(0,50)));renderLib();}
-  function renderLib(){var l=getLib(),el=document.getElementById("lib");
-    if(!l.length){el.innerHTML='<div class="empty-note">ยังไม่มีไอเดียที่เก็บไว้<br>ไปที่ "คุยกับน้องครีเอทีฟ" แล้วกด 💾 ใต้คำตอบที่ชอบ เพื่อเก็บมาไว้ที่นี่ค่ะ</div>';return;}
-    el.innerHTML="";l.forEach(function(it,i){var c=document.createElement("div");c.className="libcard";c.textContent=it.t;
-      var rm=document.createElement("button");rm.className="rm";rm.textContent="×";rm.onclick=function(){var a=getLib();a.splice(i,1);localStorage.setItem(KEY_LIB,JSON.stringify(a));renderLib();};c.appendChild(rm);el.appendChild(c);});}
+  // ---- วาดรูป AI (ฟรี) ----
+  function addImg(url,promptText){
+    var d=document.createElement("div");d.className="msg bot";
+    var img=document.createElement("img");img.src=url;img.alt=promptText;d.appendChild(img);
+    var cap=document.createElement("div");cap.className="cap";
+    cap.innerHTML='🎨 '+promptText.replace(/</g,"&lt;")+' · <a href="'+url+'" target="_blank" rel="noopener">เปิดรูปเต็ม / บันทึก</a>';
+    d.appendChild(cap);stream.appendChild(d);stream.scrollTop=stream.scrollHeight;
+  }
+  async function genImage(){
+    var t=input.value.trim();if(!t){input.focus();return;}
+    input.value="";input.style.height="auto";addMsg(t,"you");
+    var db=document.getElementById("draw"),sb=document.getElementById("send");db.disabled=true;sb.disabled=true;
+    var loading=addMsg("กำลังวาดรูปให้ค่ะ รอสักครู่นะคะ... 🎨","bot");
+    function done(){db.disabled=false;sb.disabled=false;}
+    try{
+      var j=await api("image",{method:"POST",body:JSON.stringify({message:t})});
+      if(j&&j.url){
+        var im=new Image();
+        im.onload=function(){loading.remove();addImg(j.url,j.prompt||t);done();};
+        im.onerror=function(){loading.textContent="วาดรูปไม่สำเร็จ ลองใหม่นะคะ 🙏";done();};
+        im.src=j.url;
+      }else{loading.textContent="วาดรูปไม่สำเร็จ ลองใหม่นะคะ 🙏";done();}
+    }catch(e){loading.textContent="เชื่อมต่อไม่ได้ ลองใหม่ค่ะ 🙏";done();}
+  }
 
-  // ---- calendar ----
+  // ---- library (แชร์ทั้งทีมผ่านฐานข้อมูล) ----
+  var libData=[];
+  async function loadLib(){try{var j=await api("ideas");libData=j.rows||[];}catch(e){libData=[];}renderLib();}
+  async function saveLib(text){try{await api("ideas",{method:"POST",body:JSON.stringify({txt:text})});await loadLib();}catch(e){}}
+  function renderLib(){var el=document.getElementById("lib");
+    if(!libData.length){el.innerHTML='<div class="empty-note">ยังไม่มีไอเดียที่เก็บไว้<br>ไปที่ "คุยกับน้องครีเอทีฟ" แล้วกด 💾 ใต้คำตอบที่ชอบ เพื่อเก็บมาไว้ที่นี่ค่ะ (ทีมเห็นร่วมกัน)</div>';return;}
+    el.innerHTML="";libData.forEach(function(it){var c=document.createElement("div");c.className="libcard";c.textContent=it.txt;
+      var rm=document.createElement("button");rm.className="rm";rm.textContent="×";rm.onclick=async function(){try{await api("ideas?id="+it.id,{method:"DELETE"});await loadLib();}catch(e){}};c.appendChild(rm);el.appendChild(c);});}
+
+  // ---- calendar (แชร์ทั้งทีมผ่านฐานข้อมูล) ----
   var calDate=new Date();
-  function getCal(){try{return JSON.parse(localStorage.getItem(KEY_CAL)||"{}");}catch(e){return {};}}
-  function setCal(o){localStorage.setItem(KEY_CAL,JSON.stringify(o));}
+  var calData={}; // "y-m-dd" -> [{id,txt}]
+  var calMonths=["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+  async function loadCal(){
+    try{var j=await api("calendar");calData={};(j.rows||[]).forEach(function(r){(calData[r.d]=calData[r.d]||[]).push({id:r.id,txt:r.txt});});}
+    catch(e){calData={};}
+    renderCal();
+  }
   function calMove(d){calDate.setMonth(calDate.getMonth()+d);renderCal();}
   function renderCal(){
     var y=calDate.getFullYear(),m=calDate.getMonth();
-    var months=["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
-    document.getElementById("calLabel").textContent=months[m]+" "+(y+543);
-    var first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate(),data=getCal(),cal=document.getElementById("cal");
+    document.getElementById("calLabel").textContent=calMonths[m]+" "+(y+543);
+    var first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate(),cal=document.getElementById("cal");
     var dows=["อา","จ","อ","พ","พฤ","ศ","ส"];cal.innerHTML="";
     dows.forEach(function(d){var e=document.createElement("div");e.className="dow";e.textContent=d;cal.appendChild(e);});
     for(var i=0;i<first;i++){var e=document.createElement("div");e.className="day empty";cal.appendChild(e);}
     for(var dd=1;dd<=days;dd++){(function(dd){
       var key=y+"-"+(m+1)+"-"+dd,e=document.createElement("div");e.className="day";
-      var html='<div class="n">'+dd+'</div>';(data[key]||[]).forEach(function(p){html+='<div class="p">'+p.replace(/</g,"&lt;")+'</div>';});
-      e.innerHTML=html;e.onclick=function(){
-        var cur=(data[key]||[]).join(" · ");
-        var v=prompt("โพสต์วันที่ "+dd+" "+months[m]+"\n(คั่นหลายโพสต์ด้วย , · เว้นว่างเพื่อลบ)\nเช่น: 10:00 REEL วิวแม่น้ำ",cur);
-        if(v===null)return;var arr=v.split(",").map(function(s){return s.trim();}).filter(Boolean);
-        var d2=getCal();if(arr.length)d2[key]=arr;else delete d2[key];setCal(d2);renderCal();
-      };cal.appendChild(e);
+      var posts=calData[key]||[];
+      var html='<div class="n">'+dd+'</div>';posts.forEach(function(p){html+='<div class="p">'+p.txt.replace(/</g,"&lt;")+'</div>';});
+      e.innerHTML=html;e.onclick=function(){editDay(key,dd,calMonths[m]);};cal.appendChild(e);
     })(dd);}
+  }
+  async function editDay(key,dd,mname){
+    var posts=calData[key]||[];
+    var cur=posts.map(function(p){return p.txt;}).join(" , ");
+    var v=prompt("โพสต์วันที่ "+dd+" "+mname+"\n(คั่นหลายโพสต์ด้วย , · เว้นว่างเพื่อลบ)\nเช่น: 10:00 REEL วิวแม่น้ำ",cur);
+    if(v===null)return;
+    var arr=v.split(",").map(function(s){return s.trim();}).filter(Boolean);
+    try{
+      for(var i=0;i<posts.length;i++){await api("calendar?id="+posts[i].id,{method:"DELETE"});}
+      for(var k=0;k<arr.length;k++){await api("calendar",{method:"POST",body:JSON.stringify({d:key,txt:arr[k]})});}
+      await loadCal();
+    }catch(e){}
   }
   function planWithNong(){go("chat");quick("ช่วยวางแผนคอนเทนต์เดือนนี้ให้หน่อย บอกว่าวันไหนควรโพสต์อะไร (เอาไปกรอกในปฏิทิน)");}
 
