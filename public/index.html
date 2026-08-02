@@ -175,6 +175,8 @@
   .gcard p b{color:var(--accent);font-weight:700}
   .gtip{margin-top:14px;background:var(--content);border:1px solid var(--content-line);border-radius:12px;padding:13px 15px;font-size:13px;line-height:1.6}
   .gtip b{color:var(--accent)}
+  .page .pinfo{display:inline-grid;place-items:center;width:21px;height:21px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:12px;margin-left:9px;cursor:pointer;vertical-align:middle;font-weight:800}
+  .page .pinfo:hover{background:var(--accent);color:#fff}
   .msg .cap{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5}
   .msg .cap a{color:var(--accent);font-weight:700;text-decoration:none}
 
@@ -761,6 +763,24 @@
     }catch(e){msg.style.color="var(--wait)";msg.textContent="เชื่อมต่อไม่ได้ ลองใหม่ค่ะ";}
     btn.disabled=false;}
   window.analyze=analyze;
+
+  // ---- ปุ่ม ⓘ อธิบายทุกหน้า (กดดูว่าหน้านี้ทำอะไร) ----
+  var PAGEINFO={
+    "sec-home":["หน้าหลัก","แผนที่ระบบน้องครีเอทีฟ — กดกล่อง CORE ดูว่าน้องทำอะไรได้ · กดกล่องด้านล่างเพื่อเริ่มงานได้เลยค่ะ"],
+    "sec-guide":["คู่มือใช้","รวมวิธีใช้ทุกฟีเจอร์แบบเข้าใจง่าย อ่านครั้งเดียวใช้เป็นเลยค่ะ"],
+    "sec-hooks":["คลัง Hook","คลังประโยคเปิดเด็ดๆ สำหรับรีสอร์ท เจออันที่ชอบกด 'ใช้อันนี้' น้องเขียนสคริปต์+แคปชันจาก hook นั้นให้เลยค่ะ"],
+    "sec-trends":["เทรนด์/โอกาส","โอกาส/ฤดูกาลของเดือนนี้ที่เอามาทำคอนเทนต์ได้ กด 'ทำคอนเทนต์' น้องขยายเป็นไอเดีย+สคริปต์ให้ · เจอเทรนด์ TikTok บอกน้องในแชทได้เลยนะคะ"],
+    "sec-calendar":["ปฏิทินคอนเทนต์","วางแผนโพสต์ทั้งเดือน กดวันเพื่อเพิ่มโพสต์ · แชร์กันทั้งทีม ทุกคนเห็นตรงกันค่ะ"],
+    "sec-library":["คลังไอเดีย","เก็บแคปชัน/ไอเดียเด็ด (กด 💾 ใต้คำตอบในแชท) · แชร์กันทั้งทีมค่ะ"],
+    "sec-studio":["สตูดิโอ","อัปรูป/วิดีโอจริง + เขียนบอกว่าอยากได้แบบไหน → น้องตัดคลิปให้ → คลิปมาโผล่ให้โหลด ฟรีค่ะ"],
+    "sec-analytics":["วิเคราะห์โพสต์","แคปหน้า Insights (IG/FB/TikTok) มาวาง น้องอ่านตัวเลขแล้วบอกว่าโพสต์ไหนปัง ควรทำอะไรต่อ ไม่ต้องรอต่อ API ค่ะ"]
+  };
+  Object.keys(PAGEINFO).forEach(function(id){
+    var sec=document.getElementById(id);if(!sec)return;var h=sec.querySelector(".page");if(!h||h.querySelector(".pinfo"))return;
+    var b=document.createElement("span");b.className="pinfo";b.textContent="ⓘ";b.title="หน้านี้ทำอะไร";
+    b.onclick=function(){openPop(PAGEINFO[id][0],PAGEINFO[id][1],"ok");};
+    h.appendChild(b);
+  });
 
   // เริ่มระบบ (ตัวแปร/ฟังก์ชันทั้งหมดพร้อมแล้ว)
   renderHooks();renderTrends();
