@@ -32,7 +32,7 @@ app.get("/selftest", (req, res) => {
   }
   const rawKey = process.env.ANTHROPIC_API_KEY || "";
   res.json({
-    version: "v2-webapp",
+    version: "v3-keepalive",
     model: MODEL,
     keyRawLen: rawKey.length,
     keyCleanLen: rawKey.replace(/[^A-Za-z0-9_-]/g, "").length,
@@ -106,3 +106,16 @@ app.post("/ask", express.json({ limit: "256kb" }), async (req, res) => {
 app.listen(PORT, () => {
   console.log(`น้องครีเอทีฟ 🎨 (${MODEL}) รันอยู่ที่พอร์ต ${PORT}`);
 });
+
+// ---- กันเว็บหลับ: ปลุกตัวเองทุก 10 นาที (free tier หลับหลังไม่มีคนใช้ 15 นาที) ----
+// Render ใส่ RENDER_EXTERNAL_URL ให้อัตโนมัติ (เช่น https://creative-bot-jj1f.onrender.com)
+const SELF_URL = (process.env.RENDER_EXTERNAL_URL || "").trim();
+if (SELF_URL) {
+  const KEEPALIVE_MS = 10 * 60 * 1000; // 10 นาที
+  setInterval(() => {
+    fetch(`${SELF_URL}/health`)
+      .then(() => console.log("keep-alive ✓"))
+      .catch((e) => console.log("keep-alive x:", e.message));
+  }, KEEPALIVE_MS);
+  console.log(`keep-alive เปิดใช้งาน: ปลุกทุก 10 นาที (${SELF_URL})`);
+}
