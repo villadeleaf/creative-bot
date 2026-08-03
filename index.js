@@ -42,6 +42,18 @@ async function sb(pathq, opts = {}) {
 
 const conversations = new Map();
 
+// ---- Context Memory: ข้อมูลแบรนด์ที่ทีมเพิ่มเอง (น้องอ่านทุกครั้งก่อนตอบ) ----
+let brandCache = { at: 0, txt: "" };
+async function getBrandExtra() {
+  if (!SB_ON) return "";
+  if (Date.now() - brandCache.at < 60 * 1000) return brandCache.txt;
+  try {
+    const rows = await sb("brand_notes?select=txt&order=id.desc&limit=30");
+    brandCache = { at: Date.now(), txt: rows.map((r) => "• " + r.txt).join("\n") };
+  } catch (e) { /* ตารางยังไม่ถูกสร้าง — ข้ามเงียบๆ */ }
+  return brandCache.txt;
+}
+
 // ---- ตรวจรหัสทีม (ใช้กับทุก endpoint ของหน้าเว็บ) ----
 function teamOK(req) {
   return TEAM_PASSWORD && (req.headers["x-team-pass"] || "") === TEAM_PASSWORD;
@@ -108,7 +120,7 @@ app.post("/chat", express.json({ limit: "256kb" }), async (req, res) => {
 
   let replyText;
   try {
-    replyText = await generateReply(history);
+    replyText = await generateReply(history, await getBrandExtra());
   } catch (e) {
     console.error("chat error:", e.message);
     return res.status(200).json({ reply: "ระบบขัดข้องชั่วคราวค่ะ 🙏 ลองอีกครั้งนะคะ" });
@@ -134,6 +146,72 @@ app.get("/api/history", async (req, res) => {
   } catch (e) { console.error("history:", e.message); res.json({ rows: [] }); }
 });
 
+// ---- ข้อมูลแบรนด์ (Context Memory ที่ทีมแก้เองได้) ----
+app.get("/api/brand", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  try {
+    if (!SB_ON) return res.json({ rows: [] });
+    res.json({ rows: await sb("brand_notes?select=id,txt&order=id.desc&limit=50") });
+  } catch (e) { res.json({ rows: [] }); }
+});
+app.post("/api/brand", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!SB_ON) return res.status(503).json({ error: "nodb" });
+  const { txt } = req.body || {};
+  if (!txt) return res.status(400).json({ error: "txt required" });
+  try {
+    const r = await sb("brand_notes", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ txt: String(txt).slice(0, 1000) }) });
+    brandCache.at = 0; // ให้โหลดใหม่รอบหน้า — มีผลทันที
+    res.json({ row: Array.isArray(r) ? r[0] : r });
+  } catch (e) { console.error("brand post:", e.message); res.status(500).json({ error: "db" }); }
+});
+app.delete("/api/brand", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!SB_ON) return res.status(503).json({ error: "nodb" });
+  const id = parseInt(req.query.id, 10);
+  if (!id) return res.status(400).json({ error: "id required" });
+  try { await sb(`brand_notes?id=eq.${id}`, { method: "DELETE" }); brandCache.at = 0; res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ error: "db" }); }
+});
+
+// ---- Always-On: บรีฟเช้าอัตโนมัติ 07:00 ----
+app.get("/api/brief-latest", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  try {
+    if (!SB_ON) return res.json({});
+    const rows = await sb("morning_briefs?select=txt,created_at&order=id.desc&limit=1");
+    res.json(rows[0] || {});
+  } catch (e) { res.json({}); }
+});
+async function makeMorningBrief() {
+  try {
+    const items = await fetchLiveTrends();
+    if (items.length) trendsCache = { at: Date.now(), items };
+    const msg =
+      "เทรนด์เช้านี้ (น้องค้นเว็บมาแล้ว): " + JSON.stringify(items) +
+      "\n\nช่วยเขียน 'บรีฟเช้านี้' ให้ทีมคอนเทนต์: สรุปเทรนด์เด่น 2-3 อัน + วันนี้ควรโพสต์อะไร 1-2 ไอเดีย (บอกแพลตฟอร์ม+เวลาที่ควรลง) กระชับ อ่านจบใน 1 นาที";
+    const txt = await generateReply([{ role: "user", content: msg }], await getBrandExtra());
+    if (txt) await sb("morning_briefs", { method: "POST", body: JSON.stringify({ txt }) });
+    console.log("morning brief ✓");
+  } catch (e) { console.error("morning brief x:", e.message); }
+}
+let lastBriefDay = "";
+function bkkNow() { return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" })); }
+function dayKey(d) { return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); }
+async function briefTick() {
+  if (!SB_ON) return;
+  const now = bkkNow();
+  if (now.getHours() !== 7) return; // ทำเฉพาะช่วง 07:00-07:59
+  const today = dayKey(now);
+  if (lastBriefDay === today) return;
+  lastBriefDay = today;
+  try { // กันทำซ้ำหลัง restart: เช็คว่าวันนี้ทำไปแล้วหรือยัง
+    const rows = await sb("morning_briefs?select=created_at&order=id.desc&limit=1");
+    if (rows[0] && dayKey(new Date(new Date(rows[0].created_at).toLocaleString("en-US", { timeZone: "Asia/Bangkok" }))) === today) return;
+  } catch (e) {}
+  makeMorningBrief();
+}
+
 // ---- ช่องทางระบบเฮีย (x-nong-secret: ASK_SECRET) ----
 app.post("/ask", express.json({ limit: "256kb" }), async (req, res) => {
   if (!ASK_SECRET || (req.headers["x-nong-secret"] || "") !== ASK_SECRET) {
@@ -148,7 +226,7 @@ app.post("/ask", express.json({ limit: "256kb" }), async (req, res) => {
 
   let replyText;
   try {
-    replyText = await generateReply(history);
+    replyText = await generateReply(history, await getBrandExtra());
   } catch (e) {
     console.error("ask error:", e.message);
     return res.status(200).json({ reply: "" });
@@ -360,7 +438,7 @@ app.post("/api/suggest", async (req, res) => {
     (hint ? ` ต่อยอดจากไอเดียนี้: "${String(hint).slice(0, 500)}"` : " (เลือกหัวข้อที่เหมาะกับช่วงนี้ให้เลย)") +
     " — ขอสั้นกระชับ: 1) โจทย์คลิป 1 ประโยค 2) ข้อความขึ้นบนคลิป 2-3 ท่อน 3) แคปชันโพสต์ 4) แฮชแท็ก";
   try {
-    const text = await generateReply([{ role: "user", content: msg }]);
+    const text = await generateReply([{ role: "user", content: msg }], await getBrandExtra());
     res.json({ text });
   } catch (e) { console.error("suggest:", e.message); res.status(500).json({ error: "คิดไม่สำเร็จ ลองใหม่ค่ะ" }); }
 });
@@ -415,6 +493,7 @@ if (SELF_URL) {
         .then(() => console.log("db-alive ✓"))
         .catch((e) => console.log("db-alive x:", e.message));
     }
+    briefTick(); // Always-On: บรีฟเช้าอัตโนมัติช่วง 07:00
   }, KEEPALIVE_MS);
   console.log(`keep-alive เปิดใช้งาน: ปลุกทุก 10 นาที (${SELF_URL})`);
 }

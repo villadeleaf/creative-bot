@@ -271,6 +271,7 @@
         <a data-sec="calendar"><span class="ic">📅</span> ปฏิทินคอนเทนต์</a>
         <a data-sec="library"><span class="ic">💾</span> คลังไอเดีย</a>
         <a data-sec="studio"><span class="ic">🎬</span> สตูดิโอ</a>
+        <a data-sec="brand"><span class="ic">▤</span> ข้อมูลแบรนด์</a>
         <div class="grp">วิเคราะห์</div>
         <a data-sec="analytics"><span class="ic">📊</span> วิเคราะห์โพสต์</a>
         <a data-sec="ads"><span class="ic">🎯</span> Ads FB/IG</a>
@@ -291,11 +292,12 @@
         <section class="sec on" id="sec-home">
           <h2 class="page">Marketing System — Villa de Leaf</h2>
           <p class="psub">กดกล่อง 🟢 เพื่อเริ่มใช้งานจริง (แชทได้เลย) · 🔴 = ต่อข้อมูลเฟสหลัง</p>
+          <div id="briefBox" class="advicebox" style="display:none;margin-bottom:14px"></div>
           <div class="band"><div class="label mono">CORE · สมองของระบบ</div>
             <div class="core">
               <div class="cell" data-badge="ok" data-t="Claude — สมองของระบบ" data-desc="ใช้ Claude (claude-sonnet-5) เป็นสมองคิดแคปชัน ไอเดีย สคริปต์คลิป แคมเปญ ให้จริง — ทำงานอยู่แล้วในหน้า 'คุยกับน้องครีเอทีฟ' ค่ะ"><span class="qm">?</span><div class="i">✦</div><b>Claude</b><span class="mono">ORCHESTRATION</span><span class="cdot ok"></span></div>
-              <div class="cell" data-badge="ok" data-t="คลังความรู้รีสอร์ท" data-desc="น้องจำข้อมูล Villa de Leaf ได้หมด — 6 ห้องพร้อมราคา จุดขาย กิจกรรม ระยะทาง ฤดูกาล เอามาใช้ตอบทุกครั้ง ไม่ต้องบอกซ้ำ ทำงานจริงแล้วค่ะ"><span class="qm">?</span><div class="i">▤</div><b>คลังความรู้รีสอร์ท</b><span class="mono">ROOMS·PRICE·KM</span><span class="cdot ok"></span></div>
-              <div class="cell" data-badge="soon" data-t="Always-On — ทุกเช้า 07:00" data-desc="ให้น้องส่งไอเดีย/แผนคอนเทนต์ให้ทีมทุกเช้าอัตโนมัติ โดยไม่ต้องเปิดเอง — โครงพร้อมแล้ว เปิดใช้เฟสถัดไปค่ะ"><span class="qm">?</span><div class="i">◷</div><b>Always-On</b><span class="mono">ทุกเช้า 07:00</span><span class="cdot soon"></span></div>
+              <div class="cell" data-badge="ok" data-t="Context Memory — คลังความรู้+ข้อมูลแบรนด์" data-desc="น้องจำข้อมูล Villa de Leaf ครบ (ห้อง ราคา จุดขาย กิจกรรม) และทีมเพิ่ม/แก้เองได้ที่หน้า 'ข้อมูลแบรนด์' — โปรใหม่ เมนูใหม่ พิมพ์ปุ๊บ น้องใช้ตอบทันที ไม่ต้องบรีฟซ้ำค่ะ"><span class="qm">?</span><div class="i">▤</div><b>คลังความรู้รีสอร์ท</b><span class="mono">ROOMS·PRICE·BRAND</span><span class="cdot ok"></span></div>
+              <div class="cell" data-badge="ok" data-t="Always-On — ทุกเช้า 07:00" data-desc="ระบบตื่นเองทุกเช้า 07:00 — น้องค้นเทรนด์สดจากเว็บ แล้วเขียน 'บรีฟเช้านี้' (วันนี้ควรโพสต์อะไร) รอไว้ที่หน้าหลัก ทีมแค่เปิดมาอ่านตอนกินกาแฟค่ะ ☕"><span class="qm">?</span><div class="i">◷</div><b>Always-On</b><span class="mono">ทุกเช้า 07:00</span><span class="cdot ok"></span></div>
               <div class="cell" data-badge="mix" data-t="Connectors — ต่อระบบอื่น" data-desc="ช่องต่อระบบเฮียโอ๊ค (/ask) พร้อมใช้แล้ว 🟢 · ส่วนดึงข้อมูล/โพสต์ไป FB·IG·TikTok ต้องขอ API จาก Meta ก่อน 🔴 เป็นเฟสถัดไปค่ะ"><span class="qm">?</span><div class="i">⇄</div><b>Connectors</b><span class="mono">LINE·FB·IG·TT</span><span class="cdot mix"></span></div>
             </div>
           </div>
@@ -362,12 +364,26 @@
               <p>ในหน้าแชท พิมพ์บอกว่าอยากได้รูปแบบไหน แล้วกดปุ่ม <b>🎨</b> น้องวาดให้ (ใช้ทำภาพ mood/ไอเดีย/แบ็กกราวด์)</p></div>
             <div class="gcard"><div class="gh"><span class="gi">🖼️</span><b>แก้รูปจริง</b></div>
               <p>ในหน้าแชท กดปุ่ม <b>📎</b> อัปรูปจริงของรีสอร์ท + สั่งว่าจะแก้ยังไง (เช่น เปลี่ยนท้องฟ้าตอนเย็น ใส่ข้อความ) น้องแก้ให้โดยเก็บรูปเดิมไว้</p></div>
+            <div class="gcard"><div class="gh"><span class="gi">▤</span><b>ข้อมูลแบรนด์</b></div>
+              <p>พิมพ์สิ่งที่อยากให้น้อง <b>จำเพิ่ม</b> — โปรเดือนนี้ ราคาใหม่ กิจกรรม · น้องอ่านทุกครั้งก่อนตอบ <b>มีผลทันที ไม่ต้องบรีฟซ้ำ</b> · ทุกเช้า 07:00 น้องยังทำ <b>บรีฟเช้า</b> รอไว้ที่หน้าหลักให้อัตโนมัติ</p></div>
             <div class="gcard"><div class="gh"><span class="gi">🎯</span><b>Ads FB/IG</b></div>
               <p>แคปหน้าโฆษณามาวาง → น้องแกะตัวเลขเป็น <b>แดชบอร์ด</b> (การ์ดสถิติ+ตารางแคมเปญ+คำแนะนำ) บอกว่า <b>ตัวไหนคุ้ม ตัวไหนควรหยุด</b> · จำล่าสุดไว้ให้ทั้งทีม</p></div>
             <div class="gcard"><div class="gh"><span class="gi">📅</span><b>ปฏิทิน + 💾 คลังไอเดีย</b></div>
               <p>วางแผนโพสต์ทั้งเดือน + เก็บแคปชัน/ไอเดียเด็ด · <b>แชร์กันทั้งทีม</b> ทุกคนเห็นตรงกัน</p></div>
           </div>
           <div class="gtip">💡 เคล็ดลับ: งานส่วนใหญ่เริ่มที่ <b>"คุยกับน้อง"</b> ได้เลย — คิดไม่ออกก็พิมพ์ถามน้องก่อน แล้วค่อยไปหน้าอื่นตามงาน</div>
+        </section>
+
+        <!-- BRAND (Context Memory) -->
+        <section class="sec" id="sec-brand">
+          <h2 class="page">ข้อมูลแบรนด์ ▤</h2>
+          <p class="psub">สิ่งที่อยากให้น้อง "จำเพิ่ม" — โปรเดือนนี้ ราคาใหม่ กิจกรรม ประโยคที่เวิร์ค · น้องอ่านทุกครั้งก่อนตอบ ไม่ต้องบรีฟซ้ำ · แชร์ทั้งทีม ☁️</p>
+          <div class="scard" style="margin-bottom:14px">
+            <textarea id="brandTxt" rows="2" placeholder="เช่น โปรเดือนสิงหา: จอง 2 คืน แถมล่องแพฟรี · เมนูใหม่: หมูกระทะริมน้ำ 299 · ช่วงนี้เน้นขายกรุ๊ปสัมมนา"></textarea>
+            <button class="stgo" onclick="addBrand()">➕ บันทึกให้น้องจำ</button>
+            <div id="brandMsg" class="stmsg"></div>
+          </div>
+          <div id="brandList" class="stjobs"></div>
         </section>
 
         <!-- HOOKS -->
@@ -511,7 +527,7 @@
   }
   document.getElementById("pw").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
   function logout(){localStorage.removeItem(KEY_PASS);location.reload();}
-  function showApp(){document.getElementById("login").style.display="none";document.getElementById("app").style.display="block";loadCal();loadLib();loadChat();}
+  function showApp(){document.getElementById("login").style.display="none";document.getElementById("app").style.display="block";loadCal();loadLib();loadChat();loadBrief();}
   // โหลดประวัติแชทเดิมกลับมาโชว์ (เก็บถาวรใน Supabase — restart ก็ไม่ลืม)
   async function loadChat(){
     try{var j=await api("history?userId="+encodeURIComponent(uid()));
@@ -520,7 +536,7 @@
   }
 
   // ---- nav ----
-  var titles={home:"หน้าหลัก",chat:"คุยกับน้องครีเอทีฟ",guide:"คู่มือใช้ 📖",hooks:"คลัง Hook ✨",trends:"เทรนด์/โอกาส ≈",calendar:"ปฏิทินคอนเทนต์",library:"คลังไอเดีย",studio:"สตูดิโอ 🎬",analytics:"วิเคราะห์โพสต์ 📊",ads:"Ads FB/IG"};
+  var titles={home:"หน้าหลัก",chat:"คุยกับน้องครีเอทีฟ",guide:"คู่มือใช้ 📖",brand:"ข้อมูลแบรนด์ ▤",hooks:"คลัง Hook ✨",trends:"เทรนด์/โอกาส ≈",calendar:"ปฏิทินคอนเทนต์",library:"คลังไอเดีย",studio:"สตูดิโอ 🎬",analytics:"วิเคราะห์โพสต์ 📊",ads:"Ads FB/IG"};
   function go(sec){
     document.querySelectorAll(".nav a").forEach(function(a){a.classList.toggle("on",a.dataset.sec===sec);});
     document.querySelectorAll(".sec").forEach(function(s){s.classList.toggle("on",s.id==="sec-"+sec);});
@@ -529,6 +545,7 @@
     if(sec==="chat")setTimeout(function(){input.focus();},80);
     if(sec==="studio")loadStudio();
     if(sec==="ads")loadAdsLatest();
+    if(sec==="brand")loadBrand();
   }
   document.querySelectorAll(".nav a").forEach(function(a){a.addEventListener("click",function(){go(a.dataset.sec);});});
   function toggleSide(open){document.getElementById("side").classList.toggle("open",open);document.getElementById("scrim").classList.toggle("on",open);}
@@ -900,10 +917,35 @@
       renderAdsDash(j.data,d?d.toLocaleString("th-TH",{dateStyle:"medium",timeStyle:"short"}):"");}
   }catch(e){}}
 
+  // ---- ข้อมูลแบรนด์ (Context Memory ที่ทีมแก้เองได้) ----
+  var brandRows=[];
+  async function loadBrand(){try{var j=await api("brand");brandRows=j.rows||[];}catch(e){brandRows=[];}renderBrand();}
+  function renderBrand(){var el=document.getElementById("brandList");
+    if(!brandRows.length){el.innerHTML='<div class="empty-note">ยังไม่มีข้อมูลเพิ่ม — พิมพ์บอกน้องด้านบนได้เลย เช่น โปรเดือนนี้ ราคาใหม่ กิจกรรมพิเศษ</div>';return;}
+    el.innerHTML="";brandRows.forEach(function(r){var d=document.createElement("div");d.className="sj";
+      d.innerHTML='<div class="r1"><b>'+String(r.txt).replace(/</g,"&lt;")+'</b></div>';
+      var rm=document.createElement("button");rm.className="sug";rm.textContent="🗑 ลบ";
+      rm.onclick=async function(){try{await api("brand?id="+r.id,{method:"DELETE"});loadBrand();}catch(e){}};
+      d.appendChild(rm);el.appendChild(d);});}
+  async function addBrand(){var t=document.getElementById("brandTxt").value.trim(),msg=document.getElementById("brandMsg");
+    if(!t){msg.style.color="var(--wait)";msg.textContent="พิมพ์ก่อนนะคะ";return;}
+    try{await api("brand",{method:"POST",body:JSON.stringify({txt:t})});
+      document.getElementById("brandTxt").value="";msg.style.color="var(--ok)";msg.textContent="✅ น้องจำแล้ว — มีผลกับทุกคำตอบทันทีค่ะ";loadBrand();
+    }catch(e){msg.style.color="var(--wait)";msg.textContent="บันทึกไม่สำเร็จ ลองใหม่ค่ะ";}}
+  window.addBrand=addBrand;
+
+  // ---- บรีฟเช้า (Always-On 07:00) โชว์หน้าหลัก ----
+  async function loadBrief(){try{var j=await api("brief-latest");
+    if(j&&j.txt){var b=document.getElementById("briefBox");var d=j.created_at?new Date(j.created_at).toLocaleString("th-TH",{dateStyle:"medium",timeStyle:"short"}):"";
+      b.style.display="block";
+      b.innerHTML='<b>◷ บรีฟเช้านี้ (อัตโนมัติทุก 07:00):</b><br>'+String(j.txt).replace(/</g,"&lt;").replace(/\n/g,"<br>")+(d?'<div class="adwhen">อัปเดต: '+d+'</div>':'');}
+  }catch(e){}}
+
   // ---- ปุ่ม ⓘ อธิบายทุกหน้า (กดดูว่าหน้านี้ทำอะไร) ----
   var PAGEINFO={
     "sec-home":["หน้าหลัก","แผนที่ระบบน้องครีเอทีฟ — กดกล่อง CORE ดูว่าน้องทำอะไรได้ · กดกล่องด้านล่างเพื่อเริ่มงานได้เลยค่ะ"],
     "sec-guide":["คู่มือใช้","รวมวิธีใช้ทุกฟีเจอร์แบบเข้าใจง่าย อ่านครั้งเดียวใช้เป็นเลยค่ะ"],
+    "sec-brand":["ข้อมูลแบรนด์","พิมพ์สิ่งที่อยากให้น้องจำเพิ่ม (โปร/ราคาใหม่/กิจกรรม) น้องอ่านทุกครั้งก่อนตอบ มีผลทันทีทั้งแชทและระบบเฮีย ไม่ต้องบรีฟซ้ำค่ะ"],
     "sec-hooks":["คลัง Hook","คลังประโยคเปิดเด็ดๆ สำหรับรีสอร์ท เจออันที่ชอบกด 'ใช้อันนี้' น้องเขียนสคริปต์+แคปชันจาก hook นั้นให้เลยค่ะ"],
     "sec-trends":["เทรนด์/โอกาส","🔥 กด 'ดึงเทรนด์ล่าสุด' น้องค้นเว็บหาของฮิตตอนนี้จริงๆ ให้ · ด้านล่างคือโอกาส/ฤดูกาลเดือนนี้ · เจอเทรนด์ TikTok เป๊ะๆ แคปมาแปะถามน้องในแชทได้เลยค่ะ"],
     "sec-calendar":["ปฏิทินคอนเทนต์","วางแผนโพสต์ทั้งเดือน กดวันเพื่อเพิ่มโพสต์ · แชร์กันทั้งทีม ทุกคนเห็นตรงกันค่ะ"],

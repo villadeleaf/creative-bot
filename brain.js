@@ -80,13 +80,13 @@ function currentContext() {
 const API_KEY = (process.env.ANTHROPIC_API_KEY || "").replace(/[^A-Za-z0-9_-]/g, "");
 const client = new Anthropic({ apiKey: API_KEY, maxRetries: 4 });
 
-async function generateReply(history) {
+async function generateReply(history, extra) {
   const res = await client.messages.create({
     model: MODEL,
     max_tokens: 3000,
     system: [
       { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
-      { type: "text", text: currentContext() },
+      { type: "text", text: currentContext() + (extra ? "\n\n═══ ข้อมูลแบรนด์อัปเดตจากทีม (ล่าสุด — ถ้าขัดกับข้อมูลเก่า ให้ยึดอันนี้) ═══\n" + extra : "") },
     ],
     messages: history,
   });
