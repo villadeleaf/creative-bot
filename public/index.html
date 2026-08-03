@@ -891,10 +891,14 @@
       if(!j||j.off||j.error){el.style.display="none";return;}
       el.style.display="block";
       var posts=(j.posts||[]).slice().sort(function(a,b){return (b.likes+b.comments)-(a.likes+a.comments);}).slice(0,5);
+      var sm=j.summary||{};
       var h='<div class="adcards"><div class="adcard"><span class="lb">เพจ Facebook</span><b style="font-size:15px">'+String(j.name).replace(/</g,"&lt;")+'</b><span class="sb">🟢 เชื่อมสด</span></div>'+
-        '<div class="adcard"><span class="lb">ผู้ติดตาม</span><b>'+Number(j.followers).toLocaleString()+'</b><span class="sb" id="fbGrow"></span></div></div>';
-      if(posts.length){h+='<div class="lbl2" style="margin-top:4px">โพสต์เด่นล่าสุด (ยอดจริงจากเพจ)</div><table class="adtable"><tr><th>โพสต์</th><th>❤️</th><th>💬</th><th>🔁</th></tr>'+
-        posts.map(function(p){return '<tr><td>'+String(p.msg).replace(/</g,"&lt;")+'</td><td>'+p.likes+'</td><td>'+p.comments+'</td><td>'+p.shares+'</td></tr>';}).join("")+'</table>';}
+        '<div class="adcard"><span class="lb">ผู้ติดตาม</span><b>'+Number(j.followers).toLocaleString()+'</b><span class="sb" id="fbGrow"></span></div>'+
+        '<div class="adcard"><span class="lb">โพสต์ 7 วัน</span><b>'+(sm.postCount7||0)+'</b><span class="sb">โพสต์</span></div>'+
+        '<div class="adcard"><span class="lb">Engagement 7 วัน</span><b>'+(sm.eng7||0)+'</b><span class="sb">เฉลี่ย '+(sm.avgEng7||0)+'/โพสต์</span></div></div>';
+      if(j.insight)h+='<div class="advicebox">✦ <b>น้องอ่านยอดจริงแล้วแนะนำ:</b> '+String(j.insight).replace(/</g,"&lt;").replace(/\n/g,"<br>")+'</div>';
+      if(posts.length){h+='<div class="lbl2" style="margin-top:12px">โพสต์เด่นล่าสุด (ยอดจริงจากเพจ · กดดูโพสต์)</div><table class="adtable"><tr><th>โพสต์</th><th>❤️</th><th>💬</th><th>🔁</th></tr>'+
+        posts.map(function(p){var m=String(p.msg).replace(/</g,"&lt;");var cell=p.url?'<a href="'+p.url+'" target="_blank" rel="noopener" style="color:inherit">'+m+' ↗</a>':m;return '<tr><td>'+cell+'</td><td>'+p.likes+'</td><td>'+p.comments+'</td><td>'+p.shares+'</td></tr>';}).join("")+'</table>';}
       el.innerHTML='<div class="scard">'+h+'<div id="fbGrowBox"></div></div>';
       loadFbGrowth(j.followers);
     }catch(e){el.style.display="none";}}

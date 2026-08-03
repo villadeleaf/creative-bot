@@ -252,16 +252,38 @@ async function fetchPageStats() {
   const me = await fbGet(`${FB_PAGE_ID}?fields=name,followers_count,fan_count`);
   let posts = [];
   try {
-    const p = await fbGet(`${FB_PAGE_ID}/posts?fields=message,created_time,shares,likes.summary(true),comments.summary(true)&limit=8`);
+    const p = await fbGet(`${FB_PAGE_ID}/posts?fields=message,created_time,permalink_url,shares,reactions.summary(total_count),comments.summary(total_count)&limit=12`);
     posts = (p.data || []).map((x) => ({
-      msg: (x.message || "(ไม่มีข้อความ)").slice(0, 60),
+      msg: (x.message || "(รูป/ไม่มีข้อความ)").replace(/\s+/g, " ").slice(0, 60),
       when: (x.created_time || "").slice(0, 10),
-      likes: (x.likes && x.likes.summary && x.likes.summary.total_count) || 0,
+      url: x.permalink_url || "",
+      likes: (x.reactions && x.reactions.summary && x.reactions.summary.total_count) || 0,
       comments: (x.comments && x.comments.summary && x.comments.summary.total_count) || 0,
       shares: (x.shares && x.shares.count) || 0,
     }));
   } catch (e) {}
-  return { name: me.name, followers: me.followers_count || me.fan_count || 0, posts };
+  // การ์ดสรุป 7 วัน
+  const now = Date.now();
+  const recent = posts.filter((p) => p.when && now - new Date(p.when).getTime() < 7 * 864e5);
+  const eng = (arr) => arr.reduce((s, p) => s + p.likes + p.comments + p.shares, 0);
+  const summary = {
+    postCount7: recent.length,
+    eng7: eng(recent),
+    avgEng7: recent.length ? Math.round(eng(recent) / recent.length) : 0,
+  };
+  return { name: me.name, followers: me.followers_count || me.fan_count || 0, posts, summary };
 }
 
-module.exports = { generateReply, imagePrompt, analyzeImage, analyzeAdsData, visionChat, fetchLiveTrends, fetchPageStats, FB_ON, MODEL };
+// น้องอ่านยอดโพสต์จริงแล้วสรุป+แนะนำ (auto)
+async function pageInsightBrief(stats) {
+  if (!stats) return "";
+  const top = stats.posts.slice().sort((a, b) => (b.likes + b.comments + b.shares) - (a.likes + a.comments + a.shares)).slice(0, 5);
+  const msg =
+    `นี่คือข้อมูลจริงจากเพจ Facebook "${stats.name}" (ผู้ติดตาม ${stats.followers}):\n` +
+    `7 วันล่าสุด: โพสต์ ${stats.summary.postCount7} ชิ้น · engagement รวม ${stats.summary.eng7} · เฉลี่ย ${stats.summary.avgEng7}/โพสต์\n` +
+    `โพสต์เด่น: ` + top.map((p) => `"${p.msg}" (❤️${p.likes} 💬${p.comments} 🔁${p.shares})`).join(" | ") +
+    `\n\nช่วยวิเคราะห์สั้นๆ ให้ทีม: 1) โพสต์แนวไหน/ธีมไหนที่คนตอบรับดีสุด (ดูจากยอด) 2) ควรทำคอนเทนต์แบบไหนเพิ่ม 3) 1 คำแนะนำที่ทำได้ทันที — กระชับ 3-4 บรรทัด ห้าม markdown ลงท้าย ค่ะ`;
+  return await generateReply([{ role: "user", content: msg }]);
+}
+
+module.exports = { generateReply, imagePrompt, analyzeImage, analyzeAdsData, visionChat, fetchLiveTrends, fetchPageStats, pageInsightBrief, FB_ON, MODEL };

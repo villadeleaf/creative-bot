@@ -12,7 +12,7 @@ const path = require("path");
 try { require("dotenv").config({ path: path.join(__dirname, ".env") }); } catch (e) {} // โหลด .env ตอนรัน local (บน Render ใช้ env จาก dashboard)
 
 const express = require("express");
-const { generateReply, imagePrompt, analyzeImage, analyzeAdsData, visionChat, fetchLiveTrends, fetchPageStats, FB_ON, MODEL } = require("./brain");
+const { generateReply, imagePrompt, analyzeImage, analyzeAdsData, visionChat, fetchLiveTrends, fetchPageStats, pageInsightBrief, FB_ON, MODEL } = require("./brain");
 
 const app = express();
 const PORT = process.env.PORT || 3100;
@@ -495,6 +495,7 @@ app.get("/api/fb-stats", async (req, res) => {
   try {
     if (Date.now() - fbCache.at < 30 * 60 * 1000 && fbCache.data) return res.json(fbCache.data);
     const data = await fetchPageStats();
+    try { data.insight = await pageInsightBrief(data); } catch (e) { data.insight = ""; }
     fbCache = { at: Date.now(), data };
     res.json(data);
   } catch (e) { console.error("fb-stats:", e.message); res.status(502).json({ error: e.message }); }
