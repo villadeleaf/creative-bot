@@ -463,6 +463,30 @@ app.post("/api/suggest", async (req, res) => {
   } catch (e) { console.error("suggest:", e.message); res.status(500).json({ error: "คิดไม่สำเร็จ ลองใหม่ค่ะ" }); }
 });
 
+// ---- เก็บยอดผู้ติดตามรายวันอัตโนมัติ (แดชบอร์ดการโต) ----
+let lastSnapDay = "";
+async function followerSnapshotTick() {
+  if (!FB_ON || !SB_ON) return;
+  const today = dayKey(bkkNow());
+  if (lastSnapDay === today) return;
+  lastSnapDay = today;
+  try {
+    const rows = await sb(`fb_daily?select=d&d=eq.${today}&limit=1`);
+    if (rows && rows.length) return; // วันนี้เก็บแล้ว
+    const s = await fetchPageStats();
+    if (s) await sb("fb_daily", { method: "POST", body: JSON.stringify({ d: today, followers: s.followers }) });
+    console.log("fb snapshot ✓", today);
+  } catch (e) { console.error("fb snapshot x:", e.message); }
+}
+app.get("/api/fb-growth", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!FB_ON || !SB_ON) return res.json({ off: true });
+  try {
+    const rows = await sb("fb_daily?select=d,followers&order=d.asc&limit=90");
+    res.json({ rows: rows || [] });
+  } catch (e) { res.json({ rows: [] }); }
+});
+
 // ---- ยอดเพจ Facebook จริง (สำหรับหน้าวิเคราะห์โพสต์) ----
 let fbCache = { at: 0, data: null };
 app.get("/api/fb-stats", async (req, res) => {
@@ -537,6 +561,7 @@ if (SELF_URL) {
         .catch((e) => console.log("db-alive x:", e.message));
     }
     briefTick(); // Always-On: บรีฟเช้าอัตโนมัติช่วง 07:00
+    followerSnapshotTick(); // เก็บยอดผู้ติดตามรายวันอัตโนมัติ
   }, KEEPALIVE_MS);
   console.log(`keep-alive เปิดใช้งาน: ปลุกทุก 10 นาที (${SELF_URL})`);
 }

@@ -892,11 +892,26 @@
       el.style.display="block";
       var posts=(j.posts||[]).slice().sort(function(a,b){return (b.likes+b.comments)-(a.likes+a.comments);}).slice(0,5);
       var h='<div class="adcards"><div class="adcard"><span class="lb">เพจ Facebook</span><b style="font-size:15px">'+String(j.name).replace(/</g,"&lt;")+'</b><span class="sb">🟢 เชื่อมสด</span></div>'+
-        '<div class="adcard"><span class="lb">ผู้ติดตาม</span><b>'+Number(j.followers).toLocaleString()+'</b></div></div>';
+        '<div class="adcard"><span class="lb">ผู้ติดตาม</span><b>'+Number(j.followers).toLocaleString()+'</b><span class="sb" id="fbGrow"></span></div></div>';
       if(posts.length){h+='<div class="lbl2" style="margin-top:4px">โพสต์เด่นล่าสุด (ยอดจริงจากเพจ)</div><table class="adtable"><tr><th>โพสต์</th><th>❤️</th><th>💬</th><th>🔁</th></tr>'+
         posts.map(function(p){return '<tr><td>'+String(p.msg).replace(/</g,"&lt;")+'</td><td>'+p.likes+'</td><td>'+p.comments+'</td><td>'+p.shares+'</td></tr>';}).join("")+'</table>';}
-      el.innerHTML='<div class="scard">'+h+'</div>';
+      el.innerHTML='<div class="scard">'+h+'<div id="fbGrowBox"></div></div>';
+      loadFbGrowth(j.followers);
     }catch(e){el.style.display="none";}}
+  // แดชบอร์ดการโตของผู้ติดตาม (เก็บอัตโนมัติทุกวัน)
+  async function loadFbGrowth(curFollowers){
+    try{var j=await api("fb-growth");var rows=(j&&j.rows)||[];
+      if(rows.length<2){document.getElementById("fbGrowBox").innerHTML='<div class="adwhen">📈 น้องเริ่มเก็บยอดผู้ติดตามให้อัตโนมัติทุกวันแล้ว — อีก 2-3 วันจะเห็นกราฟการโตค่ะ</div>';return;}
+      var first=rows[0].followers, last=rows[rows.length-1].followers;
+      var wk=rows.length>=8?rows[rows.length-8].followers:first;
+      var diffWk=last-wk, diffAll=last-first;
+      var max=Math.max.apply(null,rows.map(function(r){return r.followers;})),min=Math.min.apply(null,rows.map(function(r){return r.followers;}));
+      var bars=rows.slice(-14).map(function(r){var hh=max>min?8+((r.followers-min)/(max-min))*40:24;return '<div style="flex:1;background:var(--accent);border-radius:3px 3px 0 0;height:'+hh+'px" title="'+r.d+': '+r.followers+'"></div>';}).join("");
+      document.getElementById("fbGrow").textContent=(diffWk>=0?"▲ +":"▼ ")+diffWk+" /สัปดาห์";
+      document.getElementById("fbGrowBox").innerHTML='<div class="lbl2" style="margin-top:12px">การเติบโต 14 วันล่าสุด (เก็บอัตโนมัติ)</div>'+
+        '<div style="display:flex;align-items:flex-end;gap:3px;height:52px;margin-top:6px">'+bars+'</div>'+
+        '<div class="adwhen">รวม '+(diffAll>=0?"+":"")+diffAll+' คน ตั้งแต่เริ่มเก็บ ('+rows.length+' วัน)</div>';
+    }catch(e){}}
 
   // ---- วิเคราะห์โพสต์ (แคปรูป Insights) ----
   var anImg=null;
