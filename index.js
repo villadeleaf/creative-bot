@@ -79,6 +79,21 @@ app.post("/login", express.json({ limit: "16kb" }), (req, res) => {
   return res.json({ ok: true });
 });
 
+// ---- ประวัติแชทถาวร (Supabase: chat_messages) — restart แล้วไม่ลืม ----
+async function loadHistory(userId) {
+  if (conversations.has(userId)) return conversations.get(userId);
+  if (!SB_ON) return [];
+  try {
+    const rows = await sb(`chat_messages?select=role,content&user_id=eq.${encodeURIComponent(userId)}&order=id.desc&limit=${MAX_TURNS * 2}`);
+    return rows.reverse().map((r) => ({ role: r.role, content: r.content }));
+  } catch (e) { console.error("loadHistory:", e.message); return []; }
+}
+function saveMessages(userId, msgs) {
+  if (!SB_ON) return;
+  sb("chat_messages", { method: "POST", body: JSON.stringify(msgs.map((m) => ({ user_id: userId, role: m.role, content: m.content }))) })
+    .catch((e) => console.error("saveMessages:", e.message));
+}
+
 // ---- แชทจริงจากหน้าเว็บ (ต้องล็อกอิน = ส่งรหัสทีมมาใน header) ----
 app.post("/chat", express.json({ limit: "256kb" }), async (req, res) => {
   if (!TEAM_PASSWORD || (req.headers["x-team-pass"] || "") !== TEAM_PASSWORD) {
@@ -87,7 +102,7 @@ app.post("/chat", express.json({ limit: "256kb" }), async (req, res) => {
   const { userId, message } = req.body || {};
   if (!userId || !message) return res.status(400).json({ error: "userId and message required" });
 
-  let history = conversations.get(userId) || [];
+  let history = await loadHistory(userId);
   history.push({ role: "user", content: String(message) });
   if (history.length > MAX_TURNS * 2) history = history.slice(-MAX_TURNS * 2);
 
@@ -102,8 +117,21 @@ app.post("/chat", express.json({ limit: "256kb" }), async (req, res) => {
   if (clean) {
     history.push({ role: "assistant", content: clean });
     conversations.set(userId, history);
+    saveMessages(userId, [{ role: "user", content: String(message) }, { role: "assistant", content: clean }]);
   }
   return res.json({ reply: clean || "ขอโทษค่ะ ตอบไม่ได้ตอนนี้ ลองใหม่นะคะ" });
+});
+
+// ---- โหลดประวัติแชทมาโชว์ตอนเปิดหน้าเว็บ ----
+app.get("/api/history", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  const userId = String(req.query.userId || "");
+  if (!userId) return res.status(400).json({ error: "userId required" });
+  try {
+    if (!SB_ON) return res.json({ rows: [] });
+    const rows = await sb(`chat_messages?select=role,content&user_id=eq.${encodeURIComponent(userId)}&order=id.desc&limit=${MAX_TURNS * 2}`);
+    res.json({ rows: rows.reverse() });
+  } catch (e) { console.error("history:", e.message); res.json({ rows: [] }); }
 });
 
 // ---- ช่องทางระบบเฮีย (x-nong-secret: ASK_SECRET) ----
