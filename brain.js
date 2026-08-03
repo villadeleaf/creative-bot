@@ -236,4 +236,32 @@ async function analyzeAdsData(dataUrl, note) {
   return { cards: Array.isArray(o.cards) ? o.cards.slice(0, 4) : [], rows: Array.isArray(o.rows) ? o.rows.slice(0, 10) : [], advice: String(o.advice || "") };
 }
 
-module.exports = { generateReply, imagePrompt, analyzeImage, analyzeAdsData, visionChat, fetchLiveTrends, MODEL };
+// ---- ดึงข้อมูลเพจ Facebook จริง (ยอด + โพสต์เด่น) ----
+const FB_TOKEN = (process.env.FB_PAGE_TOKEN || "").trim();
+const FB_PAGE_ID = (process.env.FB_PAGE_ID || "").trim();
+const FB_ON = !!(FB_TOKEN && FB_PAGE_ID);
+async function fbGet(pathq) {
+  const sep = pathq.includes("?") ? "&" : "?";
+  const r = await fetch(`https://graph.facebook.com/v21.0/${pathq}${sep}access_token=${FB_TOKEN}`);
+  const j = await r.json();
+  if (j.error) throw new Error("fb " + j.error.code + ": " + j.error.message);
+  return j;
+}
+async function fetchPageStats() {
+  if (!FB_ON) return null;
+  const me = await fbGet(`${FB_PAGE_ID}?fields=name,followers_count,fan_count`);
+  let posts = [];
+  try {
+    const p = await fbGet(`${FB_PAGE_ID}/posts?fields=message,created_time,shares,likes.summary(true),comments.summary(true)&limit=8`);
+    posts = (p.data || []).map((x) => ({
+      msg: (x.message || "(ไม่มีข้อความ)").slice(0, 60),
+      when: (x.created_time || "").slice(0, 10),
+      likes: (x.likes && x.likes.summary && x.likes.summary.total_count) || 0,
+      comments: (x.comments && x.comments.summary && x.comments.summary.total_count) || 0,
+      shares: (x.shares && x.shares.count) || 0,
+    }));
+  } catch (e) {}
+  return { name: me.name, followers: me.followers_count || me.fan_count || 0, posts };
+}
+
+module.exports = { generateReply, imagePrompt, analyzeImage, analyzeAdsData, visionChat, fetchLiveTrends, fetchPageStats, FB_ON, MODEL };

@@ -12,7 +12,7 @@ const path = require("path");
 try { require("dotenv").config({ path: path.join(__dirname, ".env") }); } catch (e) {} // โหลด .env ตอนรัน local (บน Render ใช้ env จาก dashboard)
 
 const express = require("express");
-const { generateReply, imagePrompt, analyzeImage, analyzeAdsData, visionChat, fetchLiveTrends, MODEL } = require("./brain");
+const { generateReply, imagePrompt, analyzeImage, analyzeAdsData, visionChat, fetchLiveTrends, fetchPageStats, FB_ON, MODEL } = require("./brain");
 
 const app = express();
 const PORT = process.env.PORT || 3100;
@@ -188,7 +188,14 @@ async function makeMorningBrief() {
     const items = await fetchLiveTrends();
     if (items.length) trendsCache = { at: Date.now(), items };
     // ดึง "ข้อมูลจริงในระบบ" มารวมในบรีฟ: แผนโพสต์วันนี้ + ผลโฆษณาล่าสุดที่ทีมวิเคราะห์ไว้
-    let calTxt = "", adsTxt = "";
+    let calTxt = "", adsTxt = "", fbTxt = "";
+    try {
+      const s = await fetchPageStats();
+      if (s) {
+        const top = (s.posts || []).slice().sort((a, b) => (b.likes + b.comments) - (a.likes + a.comments))[0];
+        fbTxt = `ยอดเพจ FB "${s.name}": ผู้ติดตาม ${s.followers} คน` + (top ? ` · โพสต์เด่นล่าสุด: "${top.msg}" (❤️${top.likes} 💬${top.comments} 🔁${top.shares})` : "");
+      }
+    } catch (e) {}
     try {
       const rows = await sb(`calendar?select=txt&d=eq.${encodeURIComponent(dayKey(bkkNow()))}`);
       calTxt = rows.map((r) => r.txt).join(" · ");
@@ -199,9 +206,10 @@ async function makeMorningBrief() {
     } catch (e) {}
     const msg =
       "เทรนด์เช้านี้ (น้องค้นเว็บมาแล้ว): " + JSON.stringify(items) +
+      (fbTxt ? "\n\n" + fbTxt : "") +
       (calTxt ? "\n\nแผนโพสต์ของวันนี้ในปฏิทินทีม: " + calTxt : "\n\nวันนี้ยังไม่มีแผนโพสต์ในปฏิทิน") +
       (adsTxt ? "\n\nผลโฆษณาล่าสุดที่ทีมวิเคราะห์ไว้: " + adsTxt : "") +
-      "\n\nช่วยเขียน 'บรีฟเช้านี้' ให้ทีมคอนเทนต์: 1) เทรนด์เด่น 2-3 อัน 2) วันนี้ควรโพสต์อะไร (ถ้ามีแผนในปฏิทินให้เตือน+เสริมไอเดีย ถ้าไม่มีให้เสนอ 1-2 ไอเดีย บอกแพลตฟอร์ม+เวลา) 3) ถ้ามีข้อมูลโฆษณา เตือนสั้นๆ ว่าตัวไหนควรไปต่อ/หยุด — กระชับ อ่านจบใน 1 นาที";
+      "\n\nช่วยเขียน 'บรีฟเช้านี้' ให้ทีมคอนเทนต์: 1) ทักทาย+สรุปยอดเพจสั้นๆ (ถ้ามี) 2) เทรนด์เด่น 2-3 อัน 3) วันนี้ควรโพสต์อะไร (ถ้ามีแผนในปฏิทินให้เตือน+เสริมไอเดีย ถ้าไม่มีให้เสนอ 1-2 ไอเดีย บอกแพลตฟอร์ม+เวลา) 4) ถ้ามีข้อมูลโฆษณา เตือนสั้นๆ ว่าตัวไหนควรไปต่อ/หยุด — กระชับ อ่านจบใน 1 นาที";
     const txt = await generateReply([{ role: "user", content: msg }], await getBrandExtra());
     if (txt) await sb("morning_briefs", { method: "POST", body: JSON.stringify({ txt }) });
     console.log("morning brief ✓");
@@ -453,6 +461,19 @@ app.post("/api/suggest", async (req, res) => {
     const text = await generateReply([{ role: "user", content: msg }], await getBrandExtra());
     res.json({ text });
   } catch (e) { console.error("suggest:", e.message); res.status(500).json({ error: "คิดไม่สำเร็จ ลองใหม่ค่ะ" }); }
+});
+
+// ---- ยอดเพจ Facebook จริง (สำหรับหน้าวิเคราะห์โพสต์) ----
+let fbCache = { at: 0, data: null };
+app.get("/api/fb-stats", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!FB_ON) return res.json({ off: true });
+  try {
+    if (Date.now() - fbCache.at < 30 * 60 * 1000 && fbCache.data) return res.json(fbCache.data);
+    const data = await fetchPageStats();
+    fbCache = { at: Date.now(), data };
+    res.json(data);
+  } catch (e) { console.error("fb-stats:", e.message); res.status(502).json({ error: e.message }); }
 });
 
 // ---- คลังคลิปเสร็จ (งานสตูดิโอที่ done + มีไฟล์ผลลัพธ์) ----

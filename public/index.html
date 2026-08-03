@@ -314,7 +314,7 @@
               <div class="cell" data-badge="ok" data-t="Claude — สมองของระบบ" data-desc="ใช้ Claude (claude-sonnet-5) เป็นสมองคิดแคปชัน ไอเดีย สคริปต์คลิป แคมเปญ ให้จริง — ทำงานอยู่แล้วในหน้า 'คุยกับน้องครีเอทีฟ' ค่ะ"><span class="qm">?</span><div class="i">✦</div><b>Claude</b><span class="mono">ORCHESTRATION</span><span class="cdot ok"></span></div>
               <div class="cell" data-badge="ok" data-t="Context Memory — คลังความรู้+ข้อมูลแบรนด์" data-desc="น้องจำข้อมูล Villa de Leaf ครบ (ห้อง ราคา จุดขาย กิจกรรม) และทีมเพิ่ม/แก้เองได้ที่หน้า 'ข้อมูลแบรนด์' — โปรใหม่ เมนูใหม่ พิมพ์ปุ๊บ น้องใช้ตอบทันที ไม่ต้องบรีฟซ้ำค่ะ"><span class="qm">?</span><div class="i">▤</div><b>คลังความรู้รีสอร์ท</b><span class="mono">ROOMS·PRICE·BRAND</span><span class="cdot ok"></span></div>
               <div class="cell" data-badge="ok" data-t="Always-On — ทุกเช้า 07:00" data-desc="ระบบตื่นเองทุกเช้า 07:00 — น้องค้นเทรนด์สดจากเว็บ แล้วเขียน 'บรีฟเช้านี้' (วันนี้ควรโพสต์อะไร) รอไว้ที่หน้าหลัก ทีมแค่เปิดมาอ่านตอนกินกาแฟค่ะ ☕"><span class="qm">?</span><div class="i">◷</div><b>Always-On</b><span class="mono">ทุกเช้า 07:00</span><span class="cdot ok"></span></div>
-              <div class="cell" data-badge="mix" data-t="Connectors — ต่อระบบอื่น" data-desc="ช่องต่อระบบเฮียโอ๊ค (/ask) พร้อมใช้แล้ว 🟢 · ส่วนดึงข้อมูล/โพสต์ไป FB·IG·TikTok ต้องขอ API จาก Meta ก่อน 🔴 เป็นเฟสถัดไปค่ะ"><span class="qm">?</span><div class="i">⇄</div><b>Connectors</b><span class="mono">LINE·FB·IG·TT</span><span class="cdot mix"></span></div>
+              <div class="cell" data-badge="ok" data-t="Connectors — ต่อระบบจริง" data-desc="🟢 ต่อเพจ Facebook Villa De Leaf จริงแล้ว! ยอดผู้ติดตาม+โพสต์เด่นดึงสดอัตโนมัติ เข้าหน้าวิเคราะห์+บรีฟเช้า · ช่อง /ask ต่อระบบเฮียพร้อม · IG ผูกกับเพจแล้วเพิ่มได้เลยค่ะ"><span class="qm">?</span><div class="i">⇄</div><b>Connectors</b><span class="mono">FB·LINE·API</span><span class="cdot ok"></span></div>
             </div>
           </div>
           <div class="cols">
@@ -480,7 +480,8 @@
         <!-- SOON -->
         <section class="sec" id="sec-analytics">
           <h2 class="page">วิเคราะห์โพสต์ 📊</h2>
-          <p class="psub">แคปหน้า Insights (IG/FB/TikTok) มาวาง → น้องอ่านแล้วบอกว่าโพสต์ไหนปัง ควรทำอะไรต่อ · ไม่ต้องรอต่อ API</p>
+          <p class="psub">ยอดเพจ Facebook ดึงสดอัตโนมัติ · หรือแคป Insights (IG/TikTok) มาให้น้องวิเคราะห์เพิ่ม</p>
+          <div id="fbPanel" style="display:none;margin-bottom:16px"></div>
           <div class="anwrap">
             <div class="scard">
               <div class="lbl2">แคปหน้า Insights มาวาง</div>
@@ -571,6 +572,7 @@
     if(sec==="ads")loadAdsLatest();
     if(sec==="brand")loadBrand();
     if(sec==="clips")loadClips();
+    if(sec==="analytics")loadFbStats();
   }
   document.querySelectorAll(".nav a").forEach(function(a){a.addEventListener("click",function(){go(a.dataset.sec);});});
   function toggleSide(open){document.getElementById("side").classList.toggle("open",open);document.getElementById("scrim").classList.toggle("on",open);}
@@ -883,6 +885,19 @@
       d.appendChild(b);el.appendChild(d);
     });
   }
+  // ---- ยอดเพจ Facebook จริง (ดึงสดอัตโนมัติ) ----
+  async function loadFbStats(){var el=document.getElementById("fbPanel");
+    try{var j=await api("fb-stats");
+      if(!j||j.off||j.error){el.style.display="none";return;}
+      el.style.display="block";
+      var posts=(j.posts||[]).slice().sort(function(a,b){return (b.likes+b.comments)-(a.likes+a.comments);}).slice(0,5);
+      var h='<div class="adcards"><div class="adcard"><span class="lb">เพจ Facebook</span><b style="font-size:15px">'+String(j.name).replace(/</g,"&lt;")+'</b><span class="sb">🟢 เชื่อมสด</span></div>'+
+        '<div class="adcard"><span class="lb">ผู้ติดตาม</span><b>'+Number(j.followers).toLocaleString()+'</b></div></div>';
+      if(posts.length){h+='<div class="lbl2" style="margin-top:4px">โพสต์เด่นล่าสุด (ยอดจริงจากเพจ)</div><table class="adtable"><tr><th>โพสต์</th><th>❤️</th><th>💬</th><th>🔁</th></tr>'+
+        posts.map(function(p){return '<tr><td>'+String(p.msg).replace(/</g,"&lt;")+'</td><td>'+p.likes+'</td><td>'+p.comments+'</td><td>'+p.shares+'</td></tr>';}).join("")+'</table>';}
+      el.innerHTML='<div class="scard">'+h+'</div>';
+    }catch(e){el.style.display="none";}}
+
   // ---- วิเคราะห์โพสต์ (แคปรูป Insights) ----
   var anImg=null;
   function anPick(inp){var f=inp.files&&inp.files[0];if(!f)return;
