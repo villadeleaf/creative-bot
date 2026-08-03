@@ -455,6 +455,16 @@ app.post("/api/suggest", async (req, res) => {
   } catch (e) { console.error("suggest:", e.message); res.status(500).json({ error: "คิดไม่สำเร็จ ลองใหม่ค่ะ" }); }
 });
 
+// ---- คลังคลิปเสร็จ (งานสตูดิโอที่ done + มีไฟล์ผลลัพธ์) ----
+app.get("/api/clips", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  try {
+    if (!SB_ON) return res.json({ rows: [] });
+    const rows = await sb("studio_jobs?select=id,brief,format,feel,result_url,created_at&status=eq.done&result_url=not.is.null&order=id.desc&limit=100");
+    res.json({ rows });
+  } catch (e) { console.error("clips:", e.message); res.json({ rows: [] }); }
+});
+
 // ---- แดชบอร์ดโฆษณา: แกะรูปเป็นข้อมูล + จำล่าสุดไว้ให้ทีม ----
 app.post("/api/ads-analyze", async (req, res) => {
   if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });

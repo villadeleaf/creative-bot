@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>น้องครีเอทีฟ 🎨 — Content Studio · Villa de Leaf</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#F6EFE7">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="น้องครีเอทีฟ">
 <style>
   :root{
     color-scheme:light;
@@ -167,6 +174,14 @@
   .anthumb{margin-top:8px}
   .anthumb img{max-width:100%;border-radius:10px;border:1px solid var(--line)}
   .anresult{font-size:13.5px;line-height:1.65;white-space:pre-wrap;color:var(--ink);min-height:120px}
+  /* clips */
+  .clipgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:720px){.clipgrid{grid-template-columns:1fr}}
+  .clipcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px;box-shadow:var(--shadow)}
+  .clipcard video{width:100%;border-radius:10px;background:#000;max-height:340px}
+  .clipcard b{display:block;font-size:13.5px;margin:9px 0 3px;line-height:1.4}
+  .clipcard .meta2{font-size:11.5px;color:var(--muted)}
+  .clipcard .dl2{display:inline-block;margin-top:9px;background:var(--ok);color:#fff;padding:7px 13px;border-radius:9px;font-size:12.5px;font-weight:700;text-decoration:none}
   /* ads dashboard */
   .adcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:9px;margin-bottom:13px}
   .adcard{background:var(--content);border:1px solid var(--content-line);border-radius:12px;padding:11px 12px}
@@ -271,6 +286,7 @@
         <a data-sec="calendar"><span class="ic">📅</span> ปฏิทินคอนเทนต์</a>
         <a data-sec="library"><span class="ic">💾</span> คลังไอเดีย</a>
         <a data-sec="studio"><span class="ic">🎬</span> สตูดิโอ</a>
+        <a data-sec="clips"><span class="ic">🗂️</span> คลังคลิป</a>
         <a data-sec="brand"><span class="ic">▤</span> ข้อมูลแบรนด์</a>
         <div class="grp">วิเคราะห์</div>
         <a data-sec="analytics"><span class="ic">📊</span> วิเคราะห์โพสต์</a>
@@ -371,7 +387,15 @@
             <div class="gcard"><div class="gh"><span class="gi">📅</span><b>ปฏิทิน + 💾 คลังไอเดีย</b></div>
               <p>วางแผนโพสต์ทั้งเดือน + เก็บแคปชัน/ไอเดียเด็ด · <b>แชร์กันทั้งทีม</b> ทุกคนเห็นตรงกัน</p></div>
           </div>
-          <div class="gtip">💡 เคล็ดลับ: งานส่วนใหญ่เริ่มที่ <b>"คุยกับน้อง"</b> ได้เลย — คิดไม่ออกก็พิมพ์ถามน้องก่อน แล้วค่อยไปหน้าอื่นตามงาน</div>
+          <div class="gtip">📱 <b>ติดตั้งเป็นแอปบนมือถือ:</b> iPhone → เปิดใน Safari → ปุ่มแชร์ → <b>"เพิ่มลงหน้าจอโฮม"</b> · Android → Chrome → เมนู ⋮ → <b>"ติดตั้งแอป"</b> — จะได้ไอคอน 🎨 กดใช้เหมือนแอปจริง ไม่ต้องจำลิงก์</div>
+          <div class="gtip">💡 เคล็ดลับ: งานส่วนใหญ่เริ่มที่ <b>"คุยกับน้อง"</b> ได้เลย — คิดไม่ออกก็พิมพ์ถามน้องก่อน แล้วค่อยไปหน้าอื่นตามงาน · คลิปที่ตัดเสร็จรวมอยู่ที่ <b>"คลังคลิป 🗂️"</b></div>
+        </section>
+
+        <!-- CLIPS (คลังคลิปเสร็จ) -->
+        <section class="sec" id="sec-clips">
+          <h2 class="page">คลังคลิป 🗂️</h2>
+          <p class="psub">คลิปที่น้องตัดเสร็จแล้วทั้งหมด รวมที่เดียว · กดดู/โหลดซ้ำได้ตลอด · แชร์ทั้งทีม ☁️</p>
+          <div id="clipGrid" class="clipgrid"><div class="empty-note">ยังไม่มีคลิปเสร็จ — ส่งงานแรกที่หน้า "สตูดิโอ" ได้เลยค่ะ 🎬</div></div>
         </section>
 
         <!-- BRAND (Context Memory) -->
@@ -536,7 +560,7 @@
   }
 
   // ---- nav ----
-  var titles={home:"หน้าหลัก",chat:"คุยกับน้องครีเอทีฟ",guide:"คู่มือใช้ 📖",brand:"ข้อมูลแบรนด์ ▤",hooks:"คลัง Hook ✨",trends:"เทรนด์/โอกาส ≈",calendar:"ปฏิทินคอนเทนต์",library:"คลังไอเดีย",studio:"สตูดิโอ 🎬",analytics:"วิเคราะห์โพสต์ 📊",ads:"Ads FB/IG"};
+  var titles={home:"หน้าหลัก",chat:"คุยกับน้องครีเอทีฟ",guide:"คู่มือใช้ 📖",brand:"ข้อมูลแบรนด์ ▤",clips:"คลังคลิป 🗂️",hooks:"คลัง Hook ✨",trends:"เทรนด์/โอกาส ≈",calendar:"ปฏิทินคอนเทนต์",library:"คลังไอเดีย",studio:"สตูดิโอ 🎬",analytics:"วิเคราะห์โพสต์ 📊",ads:"Ads FB/IG"};
   function go(sec){
     document.querySelectorAll(".nav a").forEach(function(a){a.classList.toggle("on",a.dataset.sec===sec);});
     document.querySelectorAll(".sec").forEach(function(s){s.classList.toggle("on",s.id==="sec-"+sec);});
@@ -546,6 +570,7 @@
     if(sec==="studio")loadStudio();
     if(sec==="ads")loadAdsLatest();
     if(sec==="brand")loadBrand();
+    if(sec==="clips")loadClips();
   }
   document.querySelectorAll(".nav a").forEach(function(a){a.addEventListener("click",function(){go(a.dataset.sec);});});
   function toggleSide(open){document.getElementById("side").classList.toggle("open",open);document.getElementById("scrim").classList.toggle("on",open);}
@@ -917,6 +942,19 @@
       renderAdsDash(j.data,d?d.toLocaleString("th-TH",{dateStyle:"medium",timeStyle:"short"}):"");}
   }catch(e){}}
 
+  // ---- คลังคลิปเสร็จ ----
+  async function loadClips(){var el=document.getElementById("clipGrid");
+    try{var j=await api("clips");var rows=j.rows||[];
+      if(!rows.length){el.innerHTML='<div class="empty-note">ยังไม่มีคลิปเสร็จ — ส่งงานแรกที่หน้า "สตูดิโอ" ได้เลยค่ะ 🎬</div>';return;}
+      el.innerHTML="";rows.forEach(function(r){var d=document.createElement("div");d.className="clipcard";
+        var dt=r.created_at?new Date(r.created_at).toLocaleDateString("th-TH",{dateStyle:"medium"}):"";
+        d.innerHTML='<video src="'+r.result_url+'" controls preload="metadata" playsinline></video>'+
+          '<b>'+String(r.brief).replace(/</g,"&lt;")+'</b>'+
+          '<div class="meta2">'+[r.format,r.feel,dt].filter(Boolean).join(" · ")+'</div>'+
+          '<a class="dl2" href="'+r.result_url+'" target="_blank" rel="noopener" download>⬇️ โหลดคลิป</a>';
+        el.appendChild(d);});
+    }catch(e){el.innerHTML='<div class="empty-note">โหลดไม่ได้ ลองใหม่ค่ะ</div>';}}
+
   // ---- ข้อมูลแบรนด์ (Context Memory ที่ทีมแก้เองได้) ----
   var brandRows=[];
   async function loadBrand(){try{var j=await api("brand");brandRows=j.rows||[];}catch(e){brandRows=[];}renderBrand();}
@@ -945,6 +983,7 @@
   var PAGEINFO={
     "sec-home":["หน้าหลัก","แผนที่ระบบน้องครีเอทีฟ — กดกล่อง CORE ดูว่าน้องทำอะไรได้ · กดกล่องด้านล่างเพื่อเริ่มงานได้เลยค่ะ"],
     "sec-guide":["คู่มือใช้","รวมวิธีใช้ทุกฟีเจอร์แบบเข้าใจง่าย อ่านครั้งเดียวใช้เป็นเลยค่ะ"],
+    "sec-clips":["คลังคลิป","คลิปที่น้องตัดเสร็จทั้งหมดรวมที่เดียว กดดู/โหลดซ้ำได้ตลอด แชร์ทั้งทีมค่ะ"],
     "sec-brand":["ข้อมูลแบรนด์","พิมพ์สิ่งที่อยากให้น้องจำเพิ่ม (โปร/ราคาใหม่/กิจกรรม) น้องอ่านทุกครั้งก่อนตอบ มีผลทันทีทั้งแชทและระบบเฮีย ไม่ต้องบรีฟซ้ำค่ะ"],
     "sec-hooks":["คลัง Hook","คลังประโยคเปิดเด็ดๆ สำหรับรีสอร์ท เจออันที่ชอบกด 'ใช้อันนี้' น้องเขียนสคริปต์+แคปชันจาก hook นั้นให้เลยค่ะ"],
     "sec-trends":["เทรนด์/โอกาส","🔥 กด 'ดึงเทรนด์ล่าสุด' น้องค้นเว็บหาของฮิตตอนนี้จริงๆ ให้ · ด้านล่างคือโอกาส/ฤดูกาลเดือนนี้ · เจอเทรนด์ TikTok เป๊ะๆ แคปมาแปะถามน้องในแชทได้เลยค่ะ"],
