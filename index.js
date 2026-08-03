@@ -12,7 +12,7 @@ const path = require("path");
 try { require("dotenv").config({ path: path.join(__dirname, ".env") }); } catch (e) {} // โหลด .env ตอนรัน local (บน Render ใช้ env จาก dashboard)
 
 const express = require("express");
-const { generateReply, imagePrompt, analyzeImage, visionChat, MODEL } = require("./brain");
+const { generateReply, imagePrompt, analyzeImage, visionChat, fetchLiveTrends, MODEL } = require("./brain");
 
 const app = express();
 const PORT = process.env.PORT || 3100;
@@ -319,6 +319,25 @@ app.post("/api/studio", async (req, res) => {
     const r = await sb("studio_jobs", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(row) });
     res.json({ row: Array.isArray(r) ? r[0] : r });
   } catch (e) { console.error("studio post:", e.message); res.status(500).json({ error: "db" }); }
+});
+
+// ---- เทรนด์สดจากเว็บ (แคช 6 ชม. กันเปลืองค่าค้นเว็บ) ----
+let trendsCache = { at: 0, items: [] };
+app.get("/api/trends-live", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  const AGE = Date.now() - trendsCache.at;
+  if (trendsCache.items.length && AGE < 6 * 60 * 60 * 1000) {
+    return res.json({ items: trendsCache.items, cachedMinutes: Math.round(AGE / 60000) });
+  }
+  try {
+    const items = await fetchLiveTrends();
+    if (items.length) trendsCache = { at: Date.now(), items };
+    res.json({ items, cachedMinutes: 0 });
+  } catch (e) {
+    console.error("trends-live:", e.message);
+    if (trendsCache.items.length) return res.json({ items: trendsCache.items, cachedMinutes: Math.round(AGE / 60000), stale: true });
+    res.status(500).json({ error: "ดึงเทรนด์ไม่สำเร็จ ลองใหม่ค่ะ" });
+  }
 });
 
 // ---- แปะรูปในแชทแล้วถามน้อง (เทรนด์/รูปอะไรก็ได้) ----

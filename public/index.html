@@ -338,7 +338,7 @@
             <div class="gcard"><div class="gh"><span class="gi">✨</span><b>คลัง Hook</b></div>
               <p>คลังประโยคเปิดเด็ดๆ สำหรับรีสอร์ท · เจออันที่ชอบกด <b>"ใช้อันนี้"</b> น้องเขียนสคริปต์ + แคปชันจาก hook นั้นให้เลย</p></div>
             <div class="gcard"><div class="gh"><span class="gi">≈</span><b>เทรนด์/โอกาส</b></div>
-              <p>โอกาส/ฤดูกาลเดือนนี้ที่เอามาทำคอนเทนต์ได้ (วันแม่ หน้าฝน ฯลฯ) · กด <b>"ทำคอนเทนต์"</b> น้องขยายเป็นไอเดีย+สคริปต์</p></div>
+              <p>กด <b>"🔥 ดึงเทรนด์ล่าสุด"</b> น้องค้นเว็บหาของฮิตตอนนี้จริงๆ + มีโอกาส/ฤดูกาลเดือนนี้ (วันแม่ หน้าฝน) · กด <b>"ทำคอนเทนต์"</b> น้องขยายเป็นไอเดีย+สคริปต์</p></div>
             <div class="gcard"><div class="gh"><span class="gi">🎬</span><b>สตูดิโอ (ส่งคลิปให้น้องตัด)</b></div>
               <p>อัปรูป/วิดีโอจริง (คลิป ≤50MB) + เขียนบอกว่าอยากได้แบบไหน (คิดไม่ออกกด <b>🧠 ให้น้องคิดให้</b>) → กด <b>ส่งให้น้องตัด</b> · คลิปเสร็จมาโผล่ให้โหลด · ไม่ถูกใจกด <b>🔁 ขอแก้เพิ่ม</b> ได้ (ฟรี)</p></div>
             <div class="gcard"><div class="gh"><span class="gi">📊</span><b>วิเคราะห์โพสต์</b></div>
@@ -364,7 +364,12 @@
         <!-- TRENDS -->
         <section class="sec" id="sec-trends">
           <h2 class="page">เทรนด์/โอกาส ≈</h2>
-          <p class="psub">โอกาส/ฤดูกาลเดือนนี้ที่เอามาทำคอนเทนต์ได้ · กด "ทำคอนเทนต์" น้องขยายเป็นไอเดีย+สคริปต์ให้</p>
+          <p class="psub">🔥 เทรนด์สด = น้องค้นเว็บหาของฮิตตอนนี้จริงๆ · ด้านล่าง = โอกาส/ฤดูกาลเดือนนี้ · กด "ทำคอนเทนต์" น้องขยายเป็นไอเดีย+สคริปต์ให้</p>
+          <div class="hcat">🔥 เทรนด์สดตอนนี้ (น้องค้นเว็บให้)</div>
+          <button class="sug" id="liveBtn" onclick="loadLiveTrends()">🔥 ดึงเทรนด์ล่าสุดจากเว็บ</button>
+          <div id="liveNote" class="stmsg" style="text-align:left"></div>
+          <div id="liveTrends" class="trendlist" style="margin-top:10px"></div>
+          <div class="hcat" style="margin-top:22px">📅 โอกาส/ฤดูกาลเดือนนี้</div>
           <div id="trendList" class="trendlist"></div>
         </section>
 
@@ -771,6 +776,25 @@
     {em:"👥",t:"กรุ๊ป/หมู่คณะ/สัมมนา",d:"รับจัดกรุ๊ป ทีมบิลดิ้ง ครอบครัวใหญ่",m:null},
     {em:"📸",t:"มุมถ่ายรูปเด็ด",d:"สปอตถ่ายรูปสวยในรีสอร์ท ลงไอจีปัง",m:null}
   ];
+  // เทรนด์สดจากเว็บ (น้องค้นจริง)
+  async function loadLiveTrends(){
+    var b=document.getElementById("liveBtn"),note=document.getElementById("liveNote"),el=document.getElementById("liveTrends");
+    b.disabled=true;b.textContent="🔎 น้องกำลังค้นเว็บ... (~ครึ่งนาที)";note.textContent="";
+    try{var j=await api("trends-live");
+      var items=(j&&j.items)||[];el.innerHTML="";
+      if(!items.length){note.style.color="var(--wait)";note.textContent="ยังดึงไม่ได้ ลองใหม่อีกทีนะคะ";}
+      else{
+        items.forEach(function(x){var d=document.createElement("div");d.className="trendcard";
+          d.innerHTML='<div class="em">'+(x.em||"🔥")+'</div><b>'+String(x.t).replace(/</g,"&lt;")+'</b><p>'+String(x.d).replace(/</g,"&lt;")+'</p>';
+          var u=document.createElement("button");u.className="use";u.textContent="ทำคอนเทนต์ →";
+          u.onclick=function(){go("chat");quick('เทรนด์ "'+x.t+'" ('+x.d+') — ช่วยคิดไอเดีย+สคริปต์รีลดัดเทรนด์นี้ให้เข้ากับรีสอร์ท พร้อมแคปชัน');};
+          d.appendChild(u);el.appendChild(d);});
+        note.style.color="var(--muted)";
+        note.textContent=j.cachedMinutes>0?("อัปเดตล่าสุดเมื่อ ~"+j.cachedMinutes+" นาทีก่อน (กดใหม่ได้ทุก 6 ชม.)"):"ค้นสดเมื่อกี้เลยค่ะ ✓";
+      }
+    }catch(e){note.style.color="var(--wait)";note.textContent="เชื่อมต่อไม่ได้ ลองใหม่ค่ะ";}
+    b.disabled=false;b.textContent="🔥 ดึงเทรนด์ล่าสุดจากเว็บ";}
+  window.loadLiveTrends=loadLiveTrends;
   function renderTrends(){
     var el=document.getElementById("trendList");el.innerHTML="";
     TRENDS.filter(function(x){return !x.m||x.m.indexOf(nowM)>=0;}).forEach(function(x){
@@ -808,7 +832,7 @@
     "sec-home":["หน้าหลัก","แผนที่ระบบน้องครีเอทีฟ — กดกล่อง CORE ดูว่าน้องทำอะไรได้ · กดกล่องด้านล่างเพื่อเริ่มงานได้เลยค่ะ"],
     "sec-guide":["คู่มือใช้","รวมวิธีใช้ทุกฟีเจอร์แบบเข้าใจง่าย อ่านครั้งเดียวใช้เป็นเลยค่ะ"],
     "sec-hooks":["คลัง Hook","คลังประโยคเปิดเด็ดๆ สำหรับรีสอร์ท เจออันที่ชอบกด 'ใช้อันนี้' น้องเขียนสคริปต์+แคปชันจาก hook นั้นให้เลยค่ะ"],
-    "sec-trends":["เทรนด์/โอกาส","โอกาส/ฤดูกาลของเดือนนี้ที่เอามาทำคอนเทนต์ได้ กด 'ทำคอนเทนต์' น้องขยายเป็นไอเดีย+สคริปต์ให้ · เจอเทรนด์ TikTok บอกน้องในแชทได้เลยนะคะ"],
+    "sec-trends":["เทรนด์/โอกาส","🔥 กด 'ดึงเทรนด์ล่าสุด' น้องค้นเว็บหาของฮิตตอนนี้จริงๆ ให้ · ด้านล่างคือโอกาส/ฤดูกาลเดือนนี้ · เจอเทรนด์ TikTok เป๊ะๆ แคปมาแปะถามน้องในแชทได้เลยค่ะ"],
     "sec-calendar":["ปฏิทินคอนเทนต์","วางแผนโพสต์ทั้งเดือน กดวันเพื่อเพิ่มโพสต์ · แชร์กันทั้งทีม ทุกคนเห็นตรงกันค่ะ"],
     "sec-library":["คลังไอเดีย","เก็บแคปชัน/ไอเดียเด็ด (กด 💾 ใต้คำตอบในแชท) · แชร์กันทั้งทีมค่ะ"],
     "sec-studio":["สตูดิโอ","อัปรูป/วิดีโอจริง + เขียนบอกว่าอยากได้แบบไหน → น้องตัดคลิปให้ → คลิปมาโผล่ให้โหลด ฟรีค่ะ"],

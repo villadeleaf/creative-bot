@@ -161,4 +161,33 @@ async function visionChat(dataUrl, question) {
   return block ? block.text.trim() : "";
 }
 
-module.exports = { generateReply, imagePrompt, analyzeImage, visionChat, MODEL };
+// ---- ดึงเทรนด์สดจากเว็บ (Claude + web search) — คืน [{em,t,d}] ----
+async function fetchLiveTrends() {
+  const res = await client.messages.create({
+    model: MODEL,
+    max_tokens: 4000,
+    tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 4 }],
+    messages: [
+      {
+        role: "user",
+        content:
+          "ค้นเว็บหาเทรนด์โซเชียล/ท่องเที่ยว/ไลฟ์สไตล์ของไทยที่กำลังฮิต 'ช่วงสัปดาห์นี้' (" + currentContext() + ") " +
+          "แล้วคัดเฉพาะอันที่รีสอร์ทริมน้ำแก่งกระจานเอามาทำคอนเทนต์ได้จริง 4-6 อัน " +
+          'ตอบกลับเป็น JSON array อย่างเดียว ห้ามมีข้อความอื่น รูปแบบ: [{"em":"อิโมจิ 1 ตัว","t":"ชื่อเทรนด์สั้นๆ","d":"เทรนด์คืออะไร + ไอเดียดัดเข้ารีสอร์ท 1 ประโยค"}]',
+      },
+    ],
+  });
+  const text = res.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
+  const m = text.match(/\[[\s\S]*\]/) || text.match(/\[[\s\S]*/); // เผื่อโดนตัดท้าย
+  if (!m) { console.error("trends: no JSON in reply:", text.slice(0, 150)); return []; }
+  const tryParse = (s) => { try { return JSON.parse(s); } catch (e) { return null; } };
+  let arr = tryParse(m[0]);
+  if (!arr) { // โดนตัดกลาง object สุดท้าย → ตัดถึง } ตัวสุดท้ายแล้วปิด ]
+    const cut = m[0].lastIndexOf("}");
+    if (cut > 0) arr = tryParse(m[0].slice(0, cut + 1) + "]");
+  }
+  if (!arr) { console.error("trends: JSON parse fail:", m[0].slice(0, 150)); return []; }
+  return Array.isArray(arr) ? arr.filter((x) => x && x.t && x.d).slice(0, 6) : [];
+}
+
+module.exports = { generateReply, imagePrompt, analyzeImage, visionChat, fetchLiveTrends, MODEL };
