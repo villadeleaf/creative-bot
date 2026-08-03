@@ -187,9 +187,21 @@ async function makeMorningBrief() {
   try {
     const items = await fetchLiveTrends();
     if (items.length) trendsCache = { at: Date.now(), items };
+    // ดึง "ข้อมูลจริงในระบบ" มารวมในบรีฟ: แผนโพสต์วันนี้ + ผลโฆษณาล่าสุดที่ทีมวิเคราะห์ไว้
+    let calTxt = "", adsTxt = "";
+    try {
+      const rows = await sb(`calendar?select=txt&d=eq.${encodeURIComponent(dayKey(bkkNow()))}`);
+      calTxt = rows.map((r) => r.txt).join(" · ");
+    } catch (e) {}
+    try {
+      const rows = await sb("ads_snapshots?select=data,created_at&order=id.desc&limit=1");
+      if (rows[0]) adsTxt = JSON.stringify(rows[0].data).slice(0, 900);
+    } catch (e) {}
     const msg =
       "เทรนด์เช้านี้ (น้องค้นเว็บมาแล้ว): " + JSON.stringify(items) +
-      "\n\nช่วยเขียน 'บรีฟเช้านี้' ให้ทีมคอนเทนต์: สรุปเทรนด์เด่น 2-3 อัน + วันนี้ควรโพสต์อะไร 1-2 ไอเดีย (บอกแพลตฟอร์ม+เวลาที่ควรลง) กระชับ อ่านจบใน 1 นาที";
+      (calTxt ? "\n\nแผนโพสต์ของวันนี้ในปฏิทินทีม: " + calTxt : "\n\nวันนี้ยังไม่มีแผนโพสต์ในปฏิทิน") +
+      (adsTxt ? "\n\nผลโฆษณาล่าสุดที่ทีมวิเคราะห์ไว้: " + adsTxt : "") +
+      "\n\nช่วยเขียน 'บรีฟเช้านี้' ให้ทีมคอนเทนต์: 1) เทรนด์เด่น 2-3 อัน 2) วันนี้ควรโพสต์อะไร (ถ้ามีแผนในปฏิทินให้เตือน+เสริมไอเดีย ถ้าไม่มีให้เสนอ 1-2 ไอเดีย บอกแพลตฟอร์ม+เวลา) 3) ถ้ามีข้อมูลโฆษณา เตือนสั้นๆ ว่าตัวไหนควรไปต่อ/หยุด — กระชับ อ่านจบใน 1 นาที";
     const txt = await generateReply([{ role: "user", content: msg }], await getBrandExtra());
     if (txt) await sb("morning_briefs", { method: "POST", body: JSON.stringify({ txt }) });
     console.log("morning brief ✓");
