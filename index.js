@@ -326,7 +326,7 @@ let trendsCache = { at: 0, items: [] };
 app.get("/api/trends-live", async (req, res) => {
   if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
   const AGE = Date.now() - trendsCache.at;
-  if (trendsCache.items.length && AGE < 6 * 60 * 60 * 1000) {
+  if (trendsCache.items.length && AGE < 24 * 60 * 60 * 1000) { // ค้นใหม่วันละครั้งพอ (ประหยัดงบ)
     return res.json({ items: trendsCache.items, cachedMinutes: Math.round(AGE / 60000) });
   }
   try {

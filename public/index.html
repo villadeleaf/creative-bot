@@ -790,7 +790,7 @@
           u.onclick=function(){go("chat");quick('เทรนด์ "'+x.t+'" ('+x.d+') — ช่วยคิดไอเดีย+สคริปต์รีลดัดเทรนด์นี้ให้เข้ากับรีสอร์ท พร้อมแคปชัน');};
           d.appendChild(u);el.appendChild(d);});
         note.style.color="var(--muted)";
-        note.textContent=j.cachedMinutes>0?("อัปเดตล่าสุดเมื่อ ~"+j.cachedMinutes+" นาทีก่อน (กดใหม่ได้ทุก 6 ชม.)"):"ค้นสดเมื่อกี้เลยค่ะ ✓";
+        note.textContent=j.cachedMinutes>0?("อัปเดตล่าสุดเมื่อ ~"+Math.round(j.cachedMinutes/60)+" ชม.ก่อน (ค้นใหม่วันละครั้ง ประหยัดงบค่ะ)"):"ค้นสดเมื่อกี้เลยค่ะ ✓";
       }
     }catch(e){note.style.color="var(--wait)";note.textContent="เชื่อมต่อไม่ได้ ลองใหม่ค่ะ";}
     b.disabled=false;b.textContent="🔥 ดึงเทรนด์ล่าสุดจากเว็บ";}
