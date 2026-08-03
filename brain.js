@@ -110,24 +110,33 @@ async function imagePrompt(thaiRequest) {
   return block ? block.text.trim().replace(/^["']+|["']+$/g, "") : String(thaiRequest || "");
 }
 
-// ---- วิเคราะห์รูปหน้า Insights (Claude vision) ----
-async function analyzeImage(dataUrl, note) {
+// ---- วิเคราะห์รูปหน้า Insights / โฆษณา (Claude vision) ----
+const ANALYZE_SYSTEM = {
+  post:
+    "คุณคือ 'น้องครีเอทีฟ' นักการตลาดคอนเทนต์รีสอร์ท Villa de Leaf ช่วยอ่านภาพหน้า Insights/สถิติโซเชียล (IG/FB/TikTok) ที่ทีมแคปมา แล้ววิเคราะห์ให้ทีมงานภายในเข้าใจง่าย " +
+    "ภาษาไทย ลงท้าย ค่ะ/คะ ห้ามใช้ markdown — เขียนข้อความธรรมดา จัดหัวข้อด้วยอิโมจินำ + บรรทัดว่าง. " +
+    "โครง: 📊 สรุปตัวเลขเด่นที่เห็น · 🔥 โพสต์/คอนเทนต์ไหนปังหรือแป้ก · 💡 ควรทำอะไรต่อ (แนวคอนเทนต์/เวลาโพสต์/สิ่งที่ควรปรับ) ให้ตรงประเด็น ใช้ได้จริงทันที. " +
+    "ถ้าตัวเลขในรูปอ่านไม่ชัด บอกตรงๆ ว่าอ่านไม่ชัดตรงไหน ห้ามเดาตัวเลขเอง.",
+  ads:
+    "คุณคือ 'น้องครีเอทีฟ' ผู้ช่วยดูโฆษณา Facebook/Instagram ของรีสอร์ท Villa de Leaf ช่วยอ่านภาพหน้า Ads Manager/ผลบูสต์โพสต์ที่ทีมแคปมา แล้ววิเคราะห์ให้เข้าใจง่าย " +
+    "ภาษาไทย ลงท้าย ค่ะ/คะ ห้ามใช้ markdown — ข้อความธรรมดา อิโมจินำหัวข้อ + บรรทัดว่าง. " +
+    "โครง: 💰 สรุปตัวเลขเด่น (งบที่ใช้ ผลที่ได้ ต้นทุนต่อผลลัพธ์/ข้อความ) · ✅ ตัวไหนคุ้ม ควรไปต่อ/เพิ่มงบ · ⛔ ตัวไหนไม่คุ้ม ควรหยุดหรือปรับ · 💡 คำแนะนำ (กลุ่มเป้าหมาย/รูปคลิปที่ใช้/ช่วงเวลา) แบบทำตามได้ทันที. " +
+    "เกณฑ์ช่วยตัดสิน: ต้นทุนต่อข้อความทัก/ต่อการจองยิ่งต่ำยิ่งดี เทียบกันเองในรูป. ห้ามเดาตัวเลขที่อ่านไม่ชัด บอกตรงๆ. " +
+    "ย้ำเสมอว่า การกดเพิ่ม/ลดงบจริง ทีมเป็นคนกดเองในแอปโฆษณา (น้องแนะนำได้ แต่ไม่แตะเงินจริง).",
+};
+async function analyzeImage(dataUrl, note, kind) {
   const m = /^data:(image\/[\w.+-]+);base64,(.+)$/.exec(dataUrl || "");
   if (!m) throw new Error("bad image");
   const res = await client.messages.create({
     model: MODEL,
     max_tokens: 1500,
-    system:
-      "คุณคือ 'น้องครีเอทีฟ' นักการตลาดคอนเทนต์รีสอร์ท Villa de Leaf ช่วยอ่านภาพหน้า Insights/สถิติโซเชียล (IG/FB/TikTok) ที่ทีมแคปมา แล้ววิเคราะห์ให้ทีมงานภายในเข้าใจง่าย " +
-      "ภาษาไทย ลงท้าย ค่ะ/คะ ห้ามใช้ markdown — เขียนข้อความธรรมดา จัดหัวข้อด้วยอิโมจินำ + บรรทัดว่าง. " +
-      "โครง: 📊 สรุปตัวเลขเด่นที่เห็น · 🔥 โพสต์/คอนเทนต์ไหนปังหรือแป้ก · 💡 ควรทำอะไรต่อ (แนวคอนเทนต์/เวลาโพสต์/สิ่งที่ควรปรับ) ให้ตรงประเด็น ใช้ได้จริงทันที. " +
-      "ถ้าตัวเลขในรูปอ่านไม่ชัด บอกตรงๆ ว่าอ่านไม่ชัดตรงไหน ห้ามเดาตัวเลขเอง.",
+    system: ANALYZE_SYSTEM[kind === "ads" ? "ads" : "post"],
     messages: [
       {
         role: "user",
         content: [
           { type: "image", source: { type: "base64", media_type: m[1], data: m[2] } },
-          { type: "text", text: (note ? "คำถามเพิ่มเติมจากทีม: " + note + "\n\n" : "") + "ช่วยวิเคราะห์หน้า Insights นี้ให้หน่อยค่ะ" },
+          { type: "text", text: (note ? "คำถามเพิ่มเติมจากทีม: " + note + "\n\n" : "") + (kind === "ads" ? "ช่วยวิเคราะห์หน้าโฆษณานี้ให้หน่อยค่ะ" : "ช่วยวิเคราะห์หน้า Insights นี้ให้หน่อยค่ะ") },
         ],
       },
     ],
@@ -190,4 +199,41 @@ async function fetchLiveTrends() {
   return Array.isArray(arr) ? arr.filter((x) => x && x.t && x.d).slice(0, 6) : [];
 }
 
-module.exports = { generateReply, imagePrompt, analyzeImage, visionChat, fetchLiveTrends, MODEL };
+// ---- แกะหน้าโฆษณาเป็นแดชบอร์ด (JSON: การ์ดตัวเลข + ตารางแคมเปญ + คำแนะนำ) ----
+function robustJSON(text) {
+  const m = text.match(/\{[\s\S]*\}/) || text.match(/\{[\s\S]*/);
+  if (!m) return null;
+  const tryP = (s) => { try { return JSON.parse(s); } catch (e) { return null; } };
+  let o = tryP(m[0]);
+  if (!o) { const cut = m[0].lastIndexOf("}"); if (cut > 0) o = tryP(m[0].slice(0, cut + 1)); }
+  return o;
+}
+async function analyzeAdsData(dataUrl, note) {
+  const m = /^data:(image\/[\w.+-]+);base64,(.+)$/.exec(dataUrl || "");
+  if (!m) throw new Error("bad image");
+  const res = await client.messages.create({
+    model: MODEL,
+    max_tokens: 2500,
+    system:
+      "คุณคือนักการตลาดโฆษณาของรีสอร์ท อ่านภาพหน้า Ads Manager/ผลบูสต์โพสต์ แล้วแกะข้อมูลเป็น JSON เท่านั้น ห้ามมีข้อความอื่น. รูปแบบ: " +
+      '{"cards":[{"label":"ชื่อตัวเลข เช่น งบที่ใช้","value":"เลขพร้อมหน่วย","sub":"หมายเหตุสั้น"}],' +
+      '"rows":[{"name":"ชื่อแคมเปญ/แอด","spend":"งบ","result":"ผลที่ได้ เช่น 24 ข้อความ","cost":"ต้นทุนต่อผล","score":"good หรือ mid หรือ bad"}],' +
+      '"advice":"คำแนะนำภาษาไทย 2-4 ประโยค ลงท้าย ค่ะ บอกชัดว่าตัวไหนควรไปต่อ ตัวไหนควรหยุด/ปรับ"} ' +
+      "กติกา: cards 2-4 อัน เอาเฉพาะเลขเด่นที่เห็นจริงในรูป · rows เอาเท่าที่เห็น (ไม่มีตารางก็ให้ []) · score: good=คุ้ม bad=แพง/ไม่คุ้ม เทียบกันเองในรูป · ห้ามแต่งเลขที่มองไม่เห็น.",
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: m[1], data: m[2] } },
+          { type: "text", text: (note ? "โจทย์จากทีม: " + note + "\n" : "") + "แกะข้อมูลหน้าโฆษณานี้เป็น JSON ตามรูปแบบที่กำหนดค่ะ" },
+        ],
+      },
+    ],
+  });
+  const text = res.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
+  const o = robustJSON(text);
+  if (!o || (!Array.isArray(o.cards) && !o.advice)) throw new Error("parse fail: " + text.slice(0, 120));
+  return { cards: Array.isArray(o.cards) ? o.cards.slice(0, 4) : [], rows: Array.isArray(o.rows) ? o.rows.slice(0, 10) : [], advice: String(o.advice || "") };
+}
+
+module.exports = { generateReply, imagePrompt, analyzeImage, analyzeAdsData, visionChat, fetchLiveTrends, MODEL };

@@ -12,7 +12,7 @@ const path = require("path");
 try { require("dotenv").config({ path: path.join(__dirname, ".env") }); } catch (e) {} // โหลด .env ตอนรัน local (บน Render ใช้ env จาก dashboard)
 
 const express = require("express");
-const { generateReply, imagePrompt, analyzeImage, visionChat, fetchLiveTrends, MODEL } = require("./brain");
+const { generateReply, imagePrompt, analyzeImage, analyzeAdsData, visionChat, fetchLiveTrends, MODEL } = require("./brain");
 
 const app = express();
 const PORT = process.env.PORT || 3100;
@@ -365,13 +365,33 @@ app.post("/api/suggest", async (req, res) => {
   } catch (e) { console.error("suggest:", e.message); res.status(500).json({ error: "คิดไม่สำเร็จ ลองใหม่ค่ะ" }); }
 });
 
-// ---- วิเคราะห์โพสต์จากรูป Insights (Claude vision) ----
-app.post("/api/analyze", async (req, res) => {
+// ---- แดชบอร์ดโฆษณา: แกะรูปเป็นข้อมูล + จำล่าสุดไว้ให้ทีม ----
+app.post("/api/ads-analyze", async (req, res) => {
   if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
   const { image, note } = req.body || {};
   if (!image) return res.status(400).json({ error: "image required" });
   try {
-    const text = await analyzeImage(image, note);
+    const data = await analyzeAdsData(image, note);
+    if (SB_ON) sb("ads_snapshots", { method: "POST", body: JSON.stringify({ data }) }).catch((e) => console.error("ads save:", e.message));
+    res.json({ data });
+  } catch (e) { console.error("ads-analyze:", e.message); res.status(500).json({ error: "แกะข้อมูลไม่สำเร็จ ลองแคปให้ชัดขึ้นหรือลองใหม่ค่ะ" }); }
+});
+app.get("/api/ads-latest", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  try {
+    if (!SB_ON) return res.json({});
+    const rows = await sb("ads_snapshots?select=data,created_at&order=id.desc&limit=1");
+    res.json(rows[0] || {});
+  } catch (e) { res.json({}); }
+});
+
+// ---- วิเคราะห์โพสต์จากรูป Insights (Claude vision) ----
+app.post("/api/analyze", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  const { image, note, kind } = req.body || {};
+  if (!image) return res.status(400).json({ error: "image required" });
+  try {
+    const text = await analyzeImage(image, note, kind);
     res.json({ text });
   } catch (e) { console.error("analyze:", e.message); res.status(500).json({ error: "วิเคราะห์ไม่สำเร็จ ลองใหม่ค่ะ" }); }
 });

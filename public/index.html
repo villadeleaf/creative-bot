@@ -167,6 +167,21 @@
   .anthumb{margin-top:8px}
   .anthumb img{max-width:100%;border-radius:10px;border:1px solid var(--line)}
   .anresult{font-size:13.5px;line-height:1.65;white-space:pre-wrap;color:var(--ink);min-height:120px}
+  /* ads dashboard */
+  .adcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:9px;margin-bottom:13px}
+  .adcard{background:var(--content);border:1px solid var(--content-line);border-radius:12px;padding:11px 12px}
+  .adcard b{display:block;font-size:19px;margin:2px 0}
+  .adcard .lb{font-size:10.5px;color:var(--muted);letter-spacing:.03em}
+  .adcard .sb{font-size:10.5px;color:var(--ok)}
+  .adtable{width:100%;border-collapse:collapse;font-size:12.5px}
+  .adtable th{text-align:left;color:var(--muted);font-size:10.5px;font-weight:700;padding:6px 8px;border-bottom:1px solid var(--line)}
+  .adtable td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+  .adtable td.good{color:var(--ok);font-weight:700}
+  .adtable td.bad{color:var(--wait);font-weight:700}
+  .adtable td.mid{color:var(--soon);font-weight:700}
+  .advicebox{margin-top:13px;background:var(--accent-soft);border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.65}
+  .advicebox b{color:var(--accent)}
+  .adwhen{margin-top:9px;font-size:11px;color:var(--muted)}
   /* guide */
   .guide{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   @media(max-width:760px){.guide{grid-template-columns:1fr}}
@@ -258,7 +273,7 @@
         <a data-sec="studio"><span class="ic">🎬</span> สตูดิโอ</a>
         <div class="grp">วิเคราะห์</div>
         <a data-sec="analytics"><span class="ic">📊</span> วิเคราะห์โพสต์</a>
-        <a data-sec="ads"><span class="ic">🎯</span> Ads FB/IG <span class="soon">เร็วๆ นี้</span></a>
+        <a data-sec="ads"><span class="ic">🎯</span> Ads FB/IG</a>
       </nav>
       <div class="foot">
         <b>Villa de Leaf</b><br>ทีมล็อกอินหลายคนได้ · <a onclick="logout()">ออกจากระบบ</a>
@@ -347,6 +362,8 @@
               <p>ในหน้าแชท พิมพ์บอกว่าอยากได้รูปแบบไหน แล้วกดปุ่ม <b>🎨</b> น้องวาดให้ (ใช้ทำภาพ mood/ไอเดีย/แบ็กกราวด์)</p></div>
             <div class="gcard"><div class="gh"><span class="gi">🖼️</span><b>แก้รูปจริง</b></div>
               <p>ในหน้าแชท กดปุ่ม <b>📎</b> อัปรูปจริงของรีสอร์ท + สั่งว่าจะแก้ยังไง (เช่น เปลี่ยนท้องฟ้าตอนเย็น ใส่ข้อความ) น้องแก้ให้โดยเก็บรูปเดิมไว้</p></div>
+            <div class="gcard"><div class="gh"><span class="gi">🎯</span><b>Ads FB/IG</b></div>
+              <p>แคปหน้าโฆษณามาวาง → น้องแกะตัวเลขเป็น <b>แดชบอร์ด</b> (การ์ดสถิติ+ตารางแคมเปญ+คำแนะนำ) บอกว่า <b>ตัวไหนคุ้ม ตัวไหนควรหยุด</b> · จำล่าสุดไว้ให้ทั้งทีม</p></div>
             <div class="gcard"><div class="gh"><span class="gi">📅</span><b>ปฏิทิน + 💾 คลังไอเดีย</b></div>
               <p>วางแผนโพสต์ทั้งเดือน + เก็บแคปชัน/ไอเดียเด็ด · <b>แชร์กันทั้งทีม</b> ทุกคนเห็นตรงกัน</p></div>
           </div>
@@ -440,7 +457,25 @@
             </div>
           </div>
         </section>
-        <section class="sec" id="sec-ads"><div class="soonbox"><div class="big">🎯</div><h3>Ads FB/IG — เร็วๆ นี้</h3><p>ดูว่าโพสต์/แอดไหนควรบูสต์ งบเท่าไหร่ — ต้องต่อ API โฆษณา Facebook/IG ก่อน เป็นเฟสถัดไปค่ะ</p></div></section>
+        <section class="sec" id="sec-ads">
+          <h2 class="page">Ads FB/IG 🎯</h2>
+          <p class="psub">แคปหน้าโฆษณา (Ads Manager / ผลบูสต์โพสต์) มาวาง → น้องบอกว่าตัวไหนคุ้ม ตัวไหนควรหยุด งบควรเทไปไหน · ไม่ต้องเชื่อม API</p>
+          <div class="anwrap">
+            <div class="scard">
+              <div class="lbl2">แคปหน้าโฆษณามาวาง</div>
+              <input type="file" id="adFile" accept="image/*" onchange="adPick(this)">
+              <div id="adThumb" class="anthumb"></div>
+              <div class="lbl2">อยากรู้อะไรเพิ่ม (ไม่บังคับ)</div>
+              <textarea id="adNote" rows="2" placeholder="เช่น งบ 300/วัน ควรเทไปตัวไหน / ทำไมแอดนี้แพง"></textarea>
+              <button class="stgo" onclick="analyzeAds()">ให้น้องวิเคราะห์โฆษณา 🎯</button>
+              <div id="adMsg" class="stmsg"></div>
+            </div>
+            <div class="scard">
+              <div class="lbl2">แดชบอร์ดโฆษณา (จากรูปล่าสุดที่ทีมแคปมา · แชร์ทั้งทีม)</div>
+              <div id="adDash"><div class="empty-note">ยังไม่มีข้อมูล — แคปหน้าโฆษณามาวางแล้วกดวิเคราะห์ น้องจะแกะเป็นแดชบอร์ดให้ค่ะ 🎯<br><br>💡 น้องแนะนำเพิ่ม/ลดงบได้ แต่การกดปรับจริง ทีมกดเองในแอปโฆษณานะคะ</div></div>
+            </div>
+          </div>
+        </section>
 
       </div>
     </div>
@@ -493,6 +528,7 @@
     toggleSide(false);
     if(sec==="chat")setTimeout(function(){input.focus();},80);
     if(sec==="studio")loadStudio();
+    if(sec==="ads")loadAdsLatest();
   }
   document.querySelectorAll(".nav a").forEach(function(a){a.addEventListener("click",function(){go(a.dataset.sec);});});
   function toggleSide(open){document.getElementById("side").classList.toggle("open",open);document.getElementById("scrim").classList.toggle("on",open);}
@@ -827,6 +863,43 @@
     btn.disabled=false;}
   window.analyze=analyze;
 
+  // ---- Ads FB/IG: แคปหน้าโฆษณา → น้องแกะเป็นแดชบอร์ด (จำล่าสุดไว้ทั้งทีม) ----
+  var adImg=null;
+  function adPick(inp){var f=inp.files&&inp.files[0];if(!f)return;
+    var rd=new FileReader();rd.onload=function(){var im=new Image();im.onload=function(){
+      var max=1400,w=im.width,h=im.height;if(w>max||h>max){var s=Math.min(max/w,max/h);w=Math.round(w*s);h=Math.round(h*s);}
+      var cv=document.createElement("canvas");cv.width=w;cv.height=h;cv.getContext("2d").drawImage(im,0,0,w,h);
+      adImg=cv.toDataURL("image/jpeg",0.85);
+      document.getElementById("adThumb").innerHTML='<img src="'+adImg+'">';
+    };im.src=rd.result;};rd.readAsDataURL(f);inp.value="";}
+  window.adPick=adPick;
+  function esc(s){return String(s==null?"":s).replace(/</g,"&lt;");}
+  function renderAdsDash(data,when){
+    var el=document.getElementById("adDash");
+    if(!data){el.innerHTML='<div class="empty-note">ยังไม่มีข้อมูล — แคปหน้าโฆษณามาวางแล้วกดวิเคราะห์ค่ะ 🎯</div>';return;}
+    var h="";
+    if(data.cards&&data.cards.length){h+='<div class="adcards">'+data.cards.map(function(c){
+      return '<div class="adcard"><span class="lb">'+esc(c.label)+'</span><b>'+esc(c.value)+'</b>'+(c.sub?'<span class="sb">'+esc(c.sub)+'</span>':'')+'</div>';}).join("")+'</div>';}
+    if(data.rows&&data.rows.length){h+='<table class="adtable"><tr><th>แคมเปญ/แอด</th><th>งบ</th><th>ผลที่ได้</th><th>ต้นทุน/ผล</th></tr>'+
+      data.rows.map(function(r){return '<tr><td>'+esc(r.name)+'</td><td>'+esc(r.spend)+'</td><td>'+esc(r.result)+'</td><td class="'+(r.score==='good'?'good':r.score==='bad'?'bad':'mid')+'">'+esc(r.cost)+'</td></tr>';}).join("")+'</table>';}
+    if(data.advice)h+='<div class="advicebox"><b>✦ น้องครีเอทีฟแนะนำ:</b> '+esc(data.advice)+'</div>';
+    if(when)h+='<div class="adwhen">อัปเดตล่าสุด: '+esc(when)+'</div>';
+    el.innerHTML=h||'<div class="empty-note">อ่านข้อมูลจากรูปไม่ได้ ลองแคปให้ชัดขึ้นค่ะ</div>';
+  }
+  async function analyzeAds(){var msg=document.getElementById("adMsg");
+    if(!adImg){msg.style.color="var(--wait)";msg.textContent="อัปรูปหน้าโฆษณาก่อนนะคะ";return;}
+    var btn=document.querySelector("#sec-ads .stgo");btn.disabled=true;msg.style.color="var(--muted)";msg.textContent="น้องกำลังแกะตัวเลข... 🎯";
+    try{var j=await api("ads-analyze",{method:"POST",body:JSON.stringify({image:adImg,note:document.getElementById("adNote").value.trim()})});
+      if(j&&j.data){renderAdsDash(j.data,"เมื่อกี้นี้เลยค่ะ ✓");msg.textContent="";}
+      else{msg.style.color="var(--wait)";msg.textContent=(j&&j.error)||"ไม่สำเร็จ ลองใหม่ค่ะ";}
+    }catch(e){msg.style.color="var(--wait)";msg.textContent="เชื่อมต่อไม่ได้ ลองใหม่ค่ะ";}
+    btn.disabled=false;}
+  window.analyzeAds=analyzeAds;
+  async function loadAdsLatest(){try{var j=await api("ads-latest");
+    if(j&&j.data){var d=j.created_at?new Date(j.created_at):null;
+      renderAdsDash(j.data,d?d.toLocaleString("th-TH",{dateStyle:"medium",timeStyle:"short"}):"");}
+  }catch(e){}}
+
   // ---- ปุ่ม ⓘ อธิบายทุกหน้า (กดดูว่าหน้านี้ทำอะไร) ----
   var PAGEINFO={
     "sec-home":["หน้าหลัก","แผนที่ระบบน้องครีเอทีฟ — กดกล่อง CORE ดูว่าน้องทำอะไรได้ · กดกล่องด้านล่างเพื่อเริ่มงานได้เลยค่ะ"],
@@ -836,7 +909,8 @@
     "sec-calendar":["ปฏิทินคอนเทนต์","วางแผนโพสต์ทั้งเดือน กดวันเพื่อเพิ่มโพสต์ · แชร์กันทั้งทีม ทุกคนเห็นตรงกันค่ะ"],
     "sec-library":["คลังไอเดีย","เก็บแคปชัน/ไอเดียเด็ด (กด 💾 ใต้คำตอบในแชท) · แชร์กันทั้งทีมค่ะ"],
     "sec-studio":["สตูดิโอ","อัปรูป/วิดีโอจริง + เขียนบอกว่าอยากได้แบบไหน → น้องตัดคลิปให้ → คลิปมาโผล่ให้โหลด ฟรีค่ะ"],
-    "sec-analytics":["วิเคราะห์โพสต์","แคปหน้า Insights (IG/FB/TikTok) มาวาง น้องอ่านตัวเลขแล้วบอกว่าโพสต์ไหนปัง ควรทำอะไรต่อ ไม่ต้องรอต่อ API ค่ะ"]
+    "sec-analytics":["วิเคราะห์โพสต์","แคปหน้า Insights (IG/FB/TikTok) มาวาง น้องอ่านตัวเลขแล้วบอกว่าโพสต์ไหนปัง ควรทำอะไรต่อ ไม่ต้องรอต่อ API ค่ะ"],
+    "sec-ads":["Ads FB/IG","แคปหน้าโฆษณา (Ads Manager/ผลบูสต์) มาวาง น้องแกะตัวเลขเป็นแดชบอร์ด บอกว่าตัวไหนคุ้ม ตัวไหนควรหยุด งบควรเทไปไหน · แดชบอร์ดล่าสุดจำไว้ให้ทั้งทีมเห็นค่ะ"]
   };
   Object.keys(PAGEINFO).forEach(function(id){
     var sec=document.getElementById(id);if(!sec)return;var h=sec.querySelector(".page");if(!h||h.querySelector(".pinfo"))return;
