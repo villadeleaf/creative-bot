@@ -291,6 +291,7 @@
         <a data-sec="brand"><span class="ic">▤</span> ข้อมูลแบรนด์</a>
         <div class="grp">วิเคราะห์</div>
         <a data-sec="analytics"><span class="ic">📊</span> วิเคราะห์โพสต์</a>
+        <a data-sec="igcomments"><span class="ic">💬</span> ตอบคอมเมนต์ IG</a>
         <a data-sec="ads"><span class="ic">🎯</span> Ads FB/IG</a>
       </nav>
       <div class="foot">
@@ -539,6 +540,12 @@
             </div>
           </div>
         </section>
+        <section class="sec" id="sec-igcomments">
+          <h2 class="page">ตอบคอมเมนต์ IG 💬</h2>
+          <p class="psub">คอมเมนต์ล่าสุดใต้โพสต์ Instagram · กด "ให้น้องร่างคำตอบ" → แก้ได้ → กดส่งตอบจริงบน IG · ไม่พลาดลูกค้า</p>
+          <div style="margin-bottom:12px"><button class="stgo" style="width:auto;padding:9px 18px" onclick="loadIgComments()">🔄 โหลดคอมเมนต์ล่าสุด</button></div>
+          <div id="igcList"><div class="empty-note">กด "โหลดคอมเมนต์ล่าสุด" เพื่อดึงคอมเมนต์จาก Instagram ค่ะ 💬</div></div>
+        </section>
         <section class="sec" id="sec-ads">
           <h2 class="page">Ads FB/IG 🎯</h2>
           <p class="psub">แคปหน้าโฆษณา (Ads Manager / ผลบูสต์โพสต์) มาวาง → น้องบอกว่าตัวไหนคุ้ม ตัวไหนควรหยุด งบควรเทไปไหน · ไม่ต้องเชื่อม API</p>
@@ -617,7 +624,7 @@
   }
 
   // ---- nav ----
-  var titles={home:"หน้าหลัก",chat:"คุยกับน้องครีเอทีฟ",guide:"คู่มือใช้ 📖",brand:"ข้อมูลแบรนด์ ▤",clips:"คลังคลิป 🗂️",schedule:"ตั้งเวลาโพสต์ FB 🚀",hooks:"คลัง Hook ✨",trends:"เทรนด์/โอกาส ≈",calendar:"ปฏิทินคอนเทนต์",library:"คลังไอเดีย",studio:"สตูดิโอ 🎬",analytics:"วิเคราะห์โพสต์ 📊",ads:"Ads FB/IG"};
+  var titles={home:"หน้าหลัก",chat:"คุยกับน้องครีเอทีฟ",guide:"คู่มือใช้ 📖",brand:"ข้อมูลแบรนด์ ▤",clips:"คลังคลิป 🗂️",schedule:"ตั้งเวลาโพสต์ FB 🚀",hooks:"คลัง Hook ✨",trends:"เทรนด์/โอกาส ≈",calendar:"ปฏิทินคอนเทนต์",library:"คลังไอเดีย",studio:"สตูดิโอ 🎬",analytics:"วิเคราะห์โพสต์ 📊",igcomments:"ตอบคอมเมนต์ IG 💬",ads:"Ads FB/IG"};
   function go(sec){
     document.querySelectorAll(".nav a").forEach(function(a){a.classList.toggle("on",a.dataset.sec===sec);});
     document.querySelectorAll(".sec").forEach(function(s){s.classList.toggle("on",s.id==="sec-"+sec);});
@@ -630,6 +637,7 @@
     if(sec==="clips")loadClips();
     if(sec==="schedule")loadPosts();
     if(sec==="analytics"){loadFbStats();loadIgStats();}
+    if(sec==="igcomments")loadIgComments();
   }
   document.querySelectorAll(".nav a").forEach(function(a){a.addEventListener("click",function(){go(a.dataset.sec);});});
   function toggleSide(open){document.getElementById("side").classList.toggle("open",open);document.getElementById("scrim").classList.toggle("on",open);}
@@ -1027,6 +1035,40 @@
         '<div class="adcard"><span class="lb">กำลังติดตาม</span><b>'+Number(j.follows_count||0).toLocaleString()+'</b><span class="sb">'+String(j.account_type||"").replace(/</g,"&lt;")+'</span></div></div>';
       el.innerHTML='<div class="scard">'+h+'</div>';
     }catch(e){el.style.display="none";}}
+
+  // ---- ตอบคอมเมนต์ IG ----
+  var _igc=[];
+  async function loadIgComments(){var el=document.getElementById("igcList");
+    el.innerHTML='<div class="empty-note">กำลังโหลดคอมเมนต์จาก Instagram... 💬</div>';
+    try{var j=await api("ig/comments");
+      if(j.off){el.innerHTML='<div class="empty-note">ยังไม่ได้เชื่อม Instagram — ไปเชื่อมที่หน้า "วิเคราะห์โพสต์" ก่อนนะคะ 📸</div>';return;}
+      if(j.connected===false){el.innerHTML='<div class="empty-note">ยังไม่ได้เชื่อม Instagram ค่ะ</div>';return;}
+      _igc=j.comments||[];
+      if(!_igc.length){el.innerHTML='<div class="empty-note">ยังไม่มีคอมเมนต์ในโพสต์ล่าสุด 🎉</div>';return;}
+      el.innerHTML="";
+      _igc.forEach(function(c,i){var d=document.createElement("div");d.className="sj";
+        var head='<div class="r1"><b>@'+String(c.username||"ลูกค้า").replace(/</g,"&lt;")+'</b>'+(c.replied?'<span class="sst done">✓ ตอบแล้ว</span>':'<span class="sst queued">รอตอบ</span>')+'</div>';
+        var body='<div style="font-size:14px;margin:5px 0;color:var(--ink)">'+String(c.text||"").replace(/</g,"&lt;")+'</div>';
+        var meta='<div class="meta">'+(c.postCaption?'ใต้โพสต์: "'+String(c.postCaption).replace(/</g,"&lt;")+'" ':'')+(c.postUrl?'· <a href="'+c.postUrl+'" target="_blank" style="color:var(--accent)">ดูโพสต์</a>':'')+'</div>';
+        var act='<div id="igcAct'+i+'" style="margin-top:8px">'+(c.replied?'<div class="adwhen" style="color:var(--ok)">✓ ตอบแล้วบน Instagram</div>':'<button class="sug" style="margin:0" onclick="draftReply('+i+')">✍️ ให้น้องร่างคำตอบ</button>')+'</div>';
+        d.innerHTML=head+body+meta+act;el.appendChild(d);});
+    }catch(e){el.innerHTML='<div class="empty-note">โหลดคอมเมนต์ไม่สำเร็จ ลองใหม่ค่ะ</div>';}}
+  async function draftReply(i){var c=_igc[i];var act=document.getElementById("igcAct"+i);if(!c||!act)return;
+    act.innerHTML='<div class="adwhen">น้องกำลังร่างคำตอบ... ✍️</div>';
+    try{var j=await api("ig/comment-draft",{method:"POST",body:JSON.stringify({text:c.text,postCaption:c.postCaption})});
+      var draft=(j&&j.draft)||"";
+      act.innerHTML='<textarea id="igcTxt'+i+'" rows="3" style="width:100%;box-sizing:border-box;border:1px solid var(--line);background:var(--content);border-radius:10px;padding:9px;font-family:inherit;color:var(--ink)">'+String(draft).replace(/</g,"&lt;")+'</textarea>'+
+        '<div style="display:flex;gap:8px;margin-top:6px"><button class="stgo" style="width:auto;padding:8px 16px;margin:0" onclick="sendReply('+i+')">📤 ส่งคำตอบ</button><button class="sug" style="margin:0" onclick="draftReply('+i+')">🔄 ร่างใหม่</button></div><div id="igcMsg'+i+'" class="stmsg"></div>';
+    }catch(e){act.innerHTML='<div class="adwhen">ร่างไม่สำเร็จ ลองใหม่ค่ะ</div>';}}
+  async function sendReply(i){var c=_igc[i];var ta=document.getElementById("igcTxt"+i);var mb=document.getElementById("igcMsg"+i);if(!c||!ta)return;
+    var text=ta.value.trim();if(!text){mb.style.color="var(--wait)";mb.textContent="พิมพ์คำตอบก่อนค่ะ";return;}
+    if(!confirm("ส่งคำตอบนี้ตอบคอมเมนต์ @"+(c.username||"")+" บน Instagram จริงเลยนะคะ?"))return;
+    mb.style.color="var(--muted)";mb.textContent="กำลังส่ง...";
+    try{var j=await api("ig/comment-reply",{method:"POST",body:JSON.stringify({commentId:c.id,message:text})});
+      if(j.ok){c.replied=true;document.getElementById("igcAct"+i).innerHTML='<div class="adwhen" style="color:var(--ok)">✓ ตอบแล้วบน Instagram</div>';}
+      else{mb.style.color="var(--wait)";mb.textContent="ส่งไม่สำเร็จ: "+((j&&j.error)||"ลองใหม่");}
+    }catch(e){mb.style.color="var(--wait)";mb.textContent="เชื่อมต่อไม่ได้ ลองใหม่ค่ะ";}}
+  window.loadIgComments=loadIgComments;window.draftReply=draftReply;window.sendReply=sendReply;
 
   // ---- วิเคราะห์โพสต์ (แคปรูป Insights) ----
   var anImg=null;

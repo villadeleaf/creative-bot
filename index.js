@@ -674,6 +674,36 @@ app.delete("/api/ig/disconnect", async (req, res) => {
   try { await sb("ig_account?id=gte.0", { method: "DELETE" }); res.json({ ok: true }); }
   catch (e) { res.status(500).json({ error: "db" }); }
 });
+// คอมเมนต์ IG ล่าสุด (สำหรับตัวช่วยตอบคอมเมนต์)
+app.get("/api/ig/comments", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!IG_CONFIGURED || !SB_ON) return res.json({ off: true });
+  const tok = await igToken();
+  if (!tok) return res.json({ connected: false });
+  try { const comments = await igRecentComments(tok, 20); res.json({ connected: true, comments }); }
+  catch (e) { console.error("ig comments:", e.message); res.status(502).json({ error: e.message }); }
+});
+// ร่างคำตอบคอมเมนต์ด้วยน้อง (Claude)
+app.post("/api/ig/comment-draft", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  const { text, postCaption } = req.body || {};
+  if (!text) return res.status(400).json({ error: "ไม่มีข้อความคอมเมนต์" });
+  const msg = `ลูกค้าคอมเมนต์ใต้โพสต์ Instagram ของรีสอร์ท: "${String(text).slice(0, 300)}"` +
+    (postCaption ? `\n(โพสต์เกี่ยวกับ: "${String(postCaption).slice(0, 100)}")` : "") +
+    `\nช่วยร่างคำตอบสั้นๆ สุภาพเป็นกันเองแบบแอดมินรีสอร์ทตอบลูกค้า — ถ้าถามราคา/ห้องว่าง/วันว่าง ให้ชวนทัก LINE @villadeleaf เพื่อเช็กให้ · ตอบแค่ 1-2 ประโยค ไม่ต้องมี markdown ลงท้ายด้วย ค่ะ/คะ ตอบมาเฉพาะข้อความที่จะตอบเลย ไม่ต้องอธิบายอย่างอื่น`;
+  try { const reply = await generateReply([{ role: "user", content: msg }], await getBrandExtra()); res.json({ draft: String(reply).trim() }); }
+  catch (e) { console.error("comment-draft:", e.message); res.status(500).json({ error: "ร่างไม่สำเร็จ ลองใหม่ค่ะ" }); }
+});
+// ส่งคำตอบคอมเมนต์จริงบน IG
+app.post("/api/ig/comment-reply", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  const { commentId, message } = req.body || {};
+  if (!commentId || !message) return res.status(400).json({ error: "ต้องมีคอมเมนต์และข้อความ" });
+  const tok = await igToken();
+  if (!tok) return res.status(503).json({ error: "ยังไม่ได้เชื่อม Instagram" });
+  try { const r = await igReplyComment(tok, commentId, message); res.json({ ok: true, id: r.id }); }
+  catch (e) { console.error("ig reply:", e.message); res.status(502).json({ error: e.message }); }
+});
 
 // ต่ออายุ token IG อัตโนมัติ (เหลือ < 10 วันค่อยต่อ) — เรียกจาก keep-alive
 let lastIgRefreshDay = "";
