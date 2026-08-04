@@ -378,7 +378,54 @@ async function igProfile(token) {
   return igGet(token, "me?fields=user_id,username,account_type,media_count,followers_count,follows_count,name,profile_picture_url");
 }
 
+// โพสต์ขึ้น IG (ต้องมีรูป public URL — IG โพสต์ข้อความล้วนไม่ได้) : สร้างคอนเทนเนอร์ → เผยแพร่
+async function igPublish(token, caption, imageUrl) {
+  if (!imageUrl) throw new Error("Instagram ต้องมีรูป (โพสต์ข้อความล้วนไม่ได้)");
+  const me = await igGet(token, "me?fields=user_id");
+  const igId = me.user_id;
+  const c = new URLSearchParams({ image_url: imageUrl, caption: caption || "", access_token: token });
+  let r = await fetch(`https://graph.instagram.com/v21.0/${igId}/media`, { method: "POST", body: c });
+  let j = await r.json();
+  if (!r.ok || j.error) throw new Error("ig media: " + JSON.stringify(j.error || j));
+  const creationId = j.id;
+  const p = new URLSearchParams({ creation_id: creationId, access_token: token });
+  r = await fetch(`https://graph.instagram.com/v21.0/${igId}/media_publish`, { method: "POST", body: p });
+  j = await r.json();
+  if (!r.ok || j.error) throw new Error("ig publish: " + JSON.stringify(j.error || j));
+  let url = "";
+  try { const m = await igGet(token, `${j.id}?fields=permalink`); url = m.permalink || ""; } catch (e) {}
+  return { ok: true, id: j.id, url };
+}
+
+// ดึงคอมเมนต์ล่าสุดในโพสต์ IG (สำหรับตัวช่วยตอบคอมเมนต์)
+async function igRecentComments(token, limit = 15) {
+  const media = await igGet(token, `me/media?fields=id,caption,permalink,media_url,comments_count,timestamp&limit=8`);
+  const out = [];
+  for (const m of (media.data || [])) {
+    if (!m.comments_count) continue;
+    try {
+      const cs = await igGet(token, `${m.id}/comments?fields=id,text,username,timestamp,replies{id}&limit=10`);
+      for (const c of (cs.data || [])) {
+        const replied = !!(c.replies && c.replies.data && c.replies.data.length);
+        out.push({ id: c.id, text: c.text || "", username: c.username || "", when: c.timestamp || "", replied,
+          postCaption: (m.caption || "").replace(/\s+/g, " ").slice(0, 70), postUrl: m.permalink || "" });
+      }
+    } catch (e) {}
+    if (out.length >= limit) break;
+  }
+  return out.slice(0, limit);
+}
+
+// ตอบกลับคอมเมนต์ IG
+async function igReplyComment(token, commentId, message) {
+  const p = new URLSearchParams({ message: message || "", access_token: token });
+  const r = await fetch(`https://graph.instagram.com/v21.0/${commentId}/replies`, { method: "POST", body: p });
+  const j = await r.json();
+  if (!r.ok || j.error) throw new Error("ig reply: " + JSON.stringify(j.error || j));
+  return { ok: true, id: j.id };
+}
+
 module.exports = {
   generateReply, imagePrompt, analyzeImage, analyzeAdsData, visionChat, fetchLiveTrends, fetchPageStats, pageInsightBrief, fbPublish, FB_ON, MODEL,
-  IG_CONFIGURED, igAuthUrl, igExchangeCode, igLongLived, igRefresh, igProfile,
+  IG_CONFIGURED, igAuthUrl, igExchangeCode, igLongLived, igRefresh, igProfile, igPublish, igRecentComments, igReplyComment,
 };

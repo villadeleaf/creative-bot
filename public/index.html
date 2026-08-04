@@ -394,16 +394,28 @@
 
         <!-- SCHEDULE (ตั้งเวลาโพสต์ FB) -->
         <section class="sec" id="sec-schedule">
-          <h2 class="page">ตั้งเวลาโพสต์ FB 🚀</h2>
-          <p class="psub">เขียนโพสต์ในนี้ → โพสต์ขึ้นเพจ Villa De Leaf จริง (โพสต์เลย/ตั้งเวลา) · ทีมเขียน+ยืนยันเอง ปลอดภัย</p>
+          <h2 class="page">ตั้งเวลาโพสต์ FB + IG 🚀</h2>
+          <p class="psub">เขียนครั้งเดียว → โพสต์ขึ้น Facebook + Instagram พร้อมกัน (โพสต์เลย/ตั้งเวลา) · ทีมเขียน+ยืนยันเอง ปลอดภัย</p>
           <div class="anwrap">
             <div class="scard">
-              <div class="lbl2">เนื้อหาโพสต์</div>
+              <div class="lbl2">💡 มีแค่ไอเดีย? ให้น้องแตกแคปชั่น 4 แพลตฟอร์มให้</div>
+              <div style="display:flex;gap:8px">
+                <input type="text" id="capIdea" placeholder="เช่น โปรสงกรานต์ พัก 2 คืน แถมอาหารเช้า" style="flex:1;border:1px solid var(--line);background:var(--content);border-radius:10px;padding:9px;font-family:inherit;color:var(--ink)">
+                <button class="sug" style="white-space:nowrap;margin:0" onclick="genCaptions()">🔄 แตกแคปชั่น</button>
+              </div>
+              <div id="capBox"></div>
+              <div class="lbl2" style="margin-top:14px">เนื้อหาโพสต์</div>
               <textarea id="pgMsg" rows="5" placeholder="เขียนโพสต์ที่จะขึ้นเพจ Facebook..."></textarea>
               <button class="sug" id="pgSug" onclick="pgSuggest()">🧠 ให้น้องช่วยเขียนให้</button>
               <div class="lbl2">แนบรูป (ไม่บังคับ)</div>
               <input type="file" id="pgFile" accept="image/*" onchange="pgPick(this)">
               <div id="pgThumb" class="anthumb"></div>
+              <div class="lbl2">โพสต์ไปที่</div>
+              <div style="display:flex;gap:16px;margin:2px 0 2px">
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="pgFB" checked> <span>📘 Facebook</span></label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="pgIG" onchange="pgIgToggle()"> <span>📸 Instagram</span></label>
+              </div>
+              <div id="pgIgNote" class="adwhen" style="display:none">📸 Instagram ต้องแนบรูปด้วยนะคะ (โพสต์ข้อความล้วนไม่ได้)</div>
               <div class="lbl2">ตั้งเวลา (เว้นว่าง = โพสต์เลย)</div>
               <input type="datetime-local" id="pgWhen" style="width:100%;border:1px solid var(--line);background:var(--content);border-radius:10px;padding:10px;font-family:inherit;color:var(--ink)">
               <div style="display:flex;gap:9px;margin-top:14px">
@@ -1097,23 +1109,51 @@
     }catch(e){msg.style.color="var(--wait)";msg.textContent="ลองใหม่ค่ะ";}
     b.disabled=false;b.textContent="🧠 ให้น้องช่วยเขียนให้";}
   window.pgSuggest=pgSuggest;
+  function pgIgToggle(){document.getElementById("pgIgNote").style.display=document.getElementById("pgIG").checked?"block":"none";}
+  window.pgIgToggle=pgIgToggle;
+  function tgLabel(t){return t==="ig"?"IG":"FB";}
   async function doPost(mode){var msg=document.getElementById("pgMsgBox");var t=document.getElementById("pgMsg").value.trim();
+    var targets=[];if(document.getElementById("pgFB").checked)targets.push("fb");if(document.getElementById("pgIG").checked)targets.push("ig");
+    if(!targets.length){msg.style.color="var(--wait)";msg.textContent="เลือกช่องทางอย่างน้อย 1 (FB/IG) ค่ะ";return;}
     if(!t&&!pgImg){msg.style.color="var(--wait)";msg.textContent="เขียนโพสต์ก่อนนะคะ";return;}
+    if(targets.indexOf("ig")>=0&&!pgImg){msg.style.color="var(--wait)";msg.textContent="Instagram ต้องแนบรูปก่อนนะคะ 📸";return;}
     var when="now";
     if(mode==="schedule"){var w=document.getElementById("pgWhen").value;
       if(!w){msg.style.color="var(--wait)";msg.textContent="เลือกวันเวลาก่อนค่ะ (หรือกดโพสต์เลย)";return;}
       when=new Date(w).toISOString();}
-    if(mode==="now"&&!confirm("โพสต์ขึ้นเพจ Villa De Leaf จริงเลยนะคะ? (คนตามหมื่นกว่าเห็นทันที)"))return;
+    if(mode==="now"&&!confirm("โพสต์ขึ้น "+targets.map(tgLabel).join(" + ")+" จริงเลยนะคะ? (คนติดตามเห็นทันที)"))return;
     var btns=document.querySelectorAll("#sec-schedule .stgo");btns.forEach(function(b){b.disabled=true;});
     msg.style.color="var(--muted)";msg.textContent=mode==="now"?"กำลังโพสต์...":"กำลังตั้งเวลา...";
-    try{var j=await api("post",{method:"POST",body:JSON.stringify({message:t,imageUrl:pgImg,when:when})});
-      if(j.posted){msg.style.color="var(--ok)";msg.innerHTML='✅ โพสต์ขึ้นเพจแล้ว! '+(j.url?'<a href="'+j.url+'" target="_blank" style="color:var(--accent)">ดูโพสต์</a>':'');}
-      else if(j.scheduled){msg.style.color="var(--ok)";msg.textContent="✅ ตั้งเวลาแล้ว! น้องจะโพสต์ให้เองตามเวลาค่ะ";}
+    try{var j=await api("post",{method:"POST",body:JSON.stringify({message:t,imageUrl:pgImg,when:when,targets:targets})});
+      if(j.posted){msg.style.color="var(--ok)";
+        var parts=(j.results||[]).map(function(r){return (r.ok?"✅ ":"⚠️ ")+tgLabel(r.target)+(r.ok&&r.url?' <a href="'+r.url+'" target="_blank" style="color:var(--accent)">ดู</a>':(r.ok?"":": "+String(r.error||"").slice(0,45)));});
+        msg.innerHTML=parts.join(" · ")||"✅ โพสต์แล้ว!";}
+      else if(j.scheduled){msg.style.color="var(--ok)";msg.textContent="✅ ตั้งเวลาแล้ว! น้องจะโพสต์ให้เองตามเวลาค่ะ ("+targets.map(tgLabel).join("+")+")";}
       else{msg.style.color="var(--wait)";msg.textContent="ไม่สำเร็จ: "+(j.error||"ลองใหม่");}
-      document.getElementById("pgMsg").value="";pgImg=null;document.getElementById("pgThumb").innerHTML="";document.getElementById("pgWhen").value="";loadPosts();
+      if(j.posted||j.scheduled){document.getElementById("pgMsg").value="";pgImg=null;document.getElementById("pgThumb").innerHTML="";document.getElementById("pgWhen").value="";}loadPosts();
     }catch(e){msg.style.color="var(--wait)";msg.textContent="เชื่อมต่อไม่ได้ ลองใหม่ค่ะ";}
     btns.forEach(function(b){b.disabled=false;});}
   window.doPost=doPost;
+  // ---- เขียนแคปชั่น 4 แพลตฟอร์มจากไอเดียเดียว ----
+  async function genCaptions(){var idea=document.getElementById("capIdea").value.trim();var box=document.getElementById("capBox");
+    if(!idea){box.innerHTML='<div class="adwhen">พิมพ์ไอเดียก่อนนะคะ</div>';return;}
+    box.innerHTML='<div class="adwhen">น้องกำลังเขียน 4 แบบ... ✍️</div>';
+    try{var j=await api("captions",{method:"POST",body:JSON.stringify({idea:idea})});
+      if(j.caps){window._caps=j.caps;var labels={fb:"📘 Facebook",ig:"📸 Instagram",tiktok:"🎵 TikTok",story:"⚡ สตอรี่"};var h="";
+        ["fb","ig","tiktok","story"].forEach(function(k){if(!j.caps[k])return;var txt=String(j.caps[k]).replace(/</g,"&lt;");
+          h+='<div style="border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:8px;background:var(--content)">'+
+            '<div style="font-weight:700;font-size:13px;margin-bottom:5px">'+labels[k]+'</div>'+
+            '<div style="font-size:13px;white-space:pre-wrap;line-height:1.5;color:var(--ink)">'+txt.replace(/\n/g,"<br>")+'</div>'+
+            '<div style="display:flex;gap:8px;margin-top:8px"><button class="sug" style="margin:0" onclick="useCaption(\''+k+'\')">↑ ใช้กับโพสต์นี้</button><button class="sug" style="margin:0" onclick="copyCap(\''+k+'\',this)">📋 คัดลอก</button></div></div>';});
+        box.innerHTML=h;}
+      else if(j.raw){box.innerHTML='<div style="border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:8px;white-space:pre-wrap;font-size:13px">'+String(j.raw).replace(/</g,"&lt;")+'</div>';}
+      else{box.innerHTML='<div class="adwhen">'+((j&&j.error)||"เขียนไม่สำเร็จ ลองใหม่ค่ะ")+'</div>';}
+    }catch(e){box.innerHTML='<div class="adwhen">เชื่อมต่อไม่ได้ ลองใหม่ค่ะ</div>';}}
+  function useCaption(k){if(window._caps&&window._caps[k]){document.getElementById("pgMsg").value=window._caps[k];document.getElementById("pgMsg").focus();
+    if(k==="ig"){document.getElementById("pgIG").checked=true;document.getElementById("pgFB").checked=false;pgIgToggle();}
+    var mb=document.getElementById("pgMsgBox");mb.style.color="var(--ok)";mb.textContent="ใส่แคปชั่น "+k.toUpperCase()+" ให้แล้ว — แนบรูป/ตั้งเวลาแล้วโพสต์ได้เลยค่ะ";}}
+  function copyCap(k,btn){if(window._caps&&window._caps[k]){navigator.clipboard.writeText(window._caps[k]).then(function(){if(btn){var o=btn.textContent;btn.textContent="✓ คัดลอกแล้ว";setTimeout(function(){btn.textContent=o;},1500);}});}}
+  window.genCaptions=genCaptions;window.useCaption=useCaption;window.copyCap=copyCap;
   var pgStatus={pending:["⏰ รอโพสต์","editing"],posted:["✅ โพสต์แล้ว","done"],failed:["⚠️ ไม่สำเร็จ","queued"]};
   async function loadPosts(){var el=document.getElementById("pgList");
     try{var j=await api("posts");var rows=j.rows||[];

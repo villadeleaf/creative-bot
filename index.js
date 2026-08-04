@@ -13,7 +13,7 @@ try { require("dotenv").config({ path: path.join(__dirname, ".env") }); } catch 
 
 const express = require("express");
 const { generateReply, imagePrompt, analyzeImage, analyzeAdsData, visionChat, fetchLiveTrends, fetchPageStats, pageInsightBrief, fbPublish, FB_ON, MODEL,
-  IG_CONFIGURED, igAuthUrl, igExchangeCode, igLongLived, igRefresh, igProfile } = require("./brain");
+  IG_CONFIGURED, igAuthUrl, igExchangeCode, igLongLived, igRefresh, igProfile, igPublish, igRecentComments, igReplyComment } = require("./brain");
 
 const app = express();
 const PORT = process.env.PORT || 3100;
@@ -58,6 +58,28 @@ async function getBrandExtra() {
 // ---- ตรวจรหัสทีม (ใช้กับทุก endpoint ของหน้าเว็บ) ----
 function teamOK(req) {
   return TEAM_PASSWORD && (req.headers["x-team-pass"] || "") === TEAM_PASSWORD;
+}
+// ดึง JSON ก้อนแรกจากข้อความ (เผื่อมี ```json ครอบ)
+function parseJSON(t) { try { const m = String(t).match(/\{[\s\S]*\}/); return m ? JSON.parse(m[0]) : null; } catch (e) { return null; } }
+// แยกแคปชั่น 4 บล็อกจากมาร์กเกอร์ [FB]/[IG]/[TIKTOK]/[STORY] (รองรับข้อความหลายบรรทัด)
+function parseCapBlocks(text) {
+  const s = String(text || "");
+  const re = /\[(FB|IG|TIKTOK|STORY)\]/gi;
+  const marks = []; let m;
+  while ((m = re.exec(s))) marks.push({ key: m[1].toLowerCase(), start: m.index, end: re.lastIndex });
+  if (!marks.length) return null;
+  const out = {};
+  for (let i = 0; i < marks.length; i++) {
+    const body = s.slice(marks[i].end, i + 1 < marks.length ? marks[i + 1].start : s.length).trim();
+    if (body) out[marks[i].key] = body;
+  }
+  return Object.keys(out).length ? out : null;
+}
+// อ่าน access token ของ IG ที่เชื่อมไว้ (แถวเดียว)
+async function igToken() {
+  if (!IG_CONFIGURED || !SB_ON) return null;
+  try { const rows = await sb("ig_account?select=access_token&order=id.desc&limit=1"); return rows && rows.length ? rows[0].access_token : null; }
+  catch (e) { return null; }
 }
 
 // ---- เสิร์ฟหน้าเว็บ (public/) ----
@@ -497,25 +519,52 @@ app.get("/api/posts", async (req, res) => {
 });
 app.post("/api/post", async (req, res) => {
   if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
-  if (!FB_ON) return res.status(503).json({ error: "ยังไม่ได้เชื่อม Facebook" });
-  const { message, imageUrl, when } = req.body || {};
+  const { message, imageUrl, when, targets } = req.body || {};
+  const tg = (Array.isArray(targets) && targets.length ? targets : ["fb"]).filter((t) => t === "fb" || t === "ig");
+  if (!tg.length) return res.status(400).json({ error: "เลือกช่องทางอย่างน้อย 1 (FB/IG)" });
   if (!message && !imageUrl) return res.status(400).json({ error: "ต้องมีข้อความหรือรูป" });
-  // when = "now" โพสต์เลย · หรือ ISO datetime = ตั้งเวลา
+  if (tg.includes("ig") && !imageUrl) return res.status(400).json({ error: "Instagram ต้องมีรูป — แนบรูปก่อนค่ะ" });
+  if (tg.includes("fb") && !FB_ON) return res.status(503).json({ error: "ยังไม่ได้เชื่อม Facebook" });
+
+  // ตั้งเวลา → เก็บ pending (รวม target ที่เลือก)
   if (when && when !== "now") {
     if (!SB_ON) return res.status(503).json({ error: "ตั้งเวลาต้องมีฐานข้อมูล" });
+    const base = { message: message || "", image_url: imageUrl || null, scheduled_at: when, status: "pending" };
     try {
-      const row = await sb("scheduled_posts", { method: "POST", headers: { Prefer: "return=representation" },
-        body: JSON.stringify({ message: message || "", image_url: imageUrl || null, scheduled_at: when, status: "pending" }) });
+      let row;
+      try { row = await sb("scheduled_posts", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ ...base, target: tg.join(",") }) }); }
+      catch (e) { row = await sb("scheduled_posts", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(base) }); } // เผื่อคอลัมน์ target ยังไม่มี
       return res.json({ scheduled: true, row: Array.isArray(row) ? row[0] : row });
     } catch (e) { console.error("schedule:", e.message); return res.status(500).json({ error: "ตั้งเวลาไม่สำเร็จ" }); }
   }
-  // โพสต์เลย
+
+  // โพสต์เลย → ทุกช่องทางที่เลือก
+  const results = [];
+  for (const t of tg) {
+    try {
+      if (t === "fb") { const r = await fbPublish(message, imageUrl); results.push({ target: "fb", ok: true, url: r.url }); }
+      else if (t === "ig") { const tok = await igToken(); if (!tok) throw new Error("ยังไม่ได้เชื่อม Instagram"); const r = await igPublish(tok, message, imageUrl); results.push({ target: "ig", ok: true, url: r.url }); }
+    } catch (e) { console.error("post " + t + ":", e.message); results.push({ target: t, ok: false, error: e.message }); }
+  }
+  fbCache.at = 0;
+  if (SB_ON) {
+    const okOne = results.find((r) => r.ok);
+    sb("scheduled_posts", { method: "POST", body: JSON.stringify({ message: message || "", image_url: imageUrl || null, scheduled_at: new Date().toISOString(), status: results.some((r) => r.ok) ? "posted" : "failed", result_url: okOne ? okOne.url : String((results[0] && results[0].error) || "").slice(0, 120) }) }).catch(() => {});
+  }
+  const anyOk = results.some((r) => r.ok);
+  res.status(anyOk ? 200 : 502).json({ posted: anyOk, results });
+});
+// ---- เขียนแคปชั่น 4 แพลตฟอร์มจากไอเดียเดียว (FB/IG/TikTok/สตอรี่) ----
+app.post("/api/captions", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  const idea = String((req.body || {}).idea || "").trim();
+  if (!idea) return res.status(400).json({ error: "เขียนไอเดียก่อนค่ะ" });
+  const msg = `เขียนแคปชั่นจากไอเดียนี้: "${idea}"\nให้ 4 เวอร์ชันสำหรับ 4 แพลตฟอร์ม เรื่องเดียวกันแต่คนละสไตล์\n- fb: อบอุ่นเล่าเรื่อง อีโมจิพอดี ปิดท้ายชวนจองผ่าน LINE\n- ig: กระชับสวย + วางแฮชแท็ก 5-8 อันบรรทัดท้าย\n- tiktok: ฮุคแรง 3 วิแรก ภาษาวัยรุ่น สั้น\n- story: สั้นมาก 1-2 บรรทัด ชวนกดลิงก์/ทัก\n\nรูปแบบคำตอบ (ทำตามเป๊ะ ห้ามมีอย่างอื่นนำหน้า/ต่อท้าย ขึ้นบรรทัดในแคปชั่นได้ตามปกติ):\n[FB]\n(แคปชั่น Facebook)\n[IG]\n(แคปชั่น Instagram)\n[TIKTOK]\n(แคปชั่น TikTok)\n[STORY]\n(แคปชั่น Story)\n\nถ้าต้องปรับคำตามกฎแบรนด์ (เช่น ไม่ประกาศส่วนลด) ให้ปรับในแคปชั่นเลยเงียบๆ ไม่ต้องอธิบายนอกบล็อก.`;
   try {
-    const r = await fbPublish(message, imageUrl);
-    if (SB_ON) sb("scheduled_posts", { method: "POST", body: JSON.stringify({ message: message || "", image_url: imageUrl || null, scheduled_at: new Date().toISOString(), status: "posted", result_url: r.url }) }).catch(() => {});
-    fbCache.at = 0;
-    res.json({ posted: true, url: r.url });
-  } catch (e) { console.error("post:", e.message); res.status(502).json({ error: e.message }); }
+    const text = await generateReply([{ role: "user", content: msg }], await getBrandExtra());
+    const caps = parseCapBlocks(text);
+    return caps ? res.json({ caps }) : res.json({ raw: text });
+  } catch (e) { console.error("captions:", e.message); res.status(500).json({ error: "เขียนไม่สำเร็จ ลองใหม่ค่ะ" }); }
 });
 app.delete("/api/posts", async (req, res) => {
   if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
@@ -527,18 +576,22 @@ app.delete("/api/posts", async (req, res) => {
 });
 // ตัวโพสต์อัตโนมัติ: เช็คโพสต์ที่ถึงเวลาแล้ว → โพสต์ให้
 async function scheduledPostTick() {
-  if (!FB_ON || !SB_ON) return;
+  if (!SB_ON) return;
   try {
     const due = await sb(`scheduled_posts?select=*&status=eq.pending&scheduled_at=lte.${new Date().toISOString()}&order=scheduled_at.asc&limit=3`);
     for (const p of due || []) {
-      try {
-        const r = await fbPublish(p.message, p.image_url);
-        await sb(`scheduled_posts?id=eq.${p.id}`, { method: "PATCH", body: JSON.stringify({ status: "posted", result_url: r.url }) });
-        console.log("scheduled post ✓", p.id);
-      } catch (e) {
-        await sb(`scheduled_posts?id=eq.${p.id}`, { method: "PATCH", body: JSON.stringify({ status: "failed", result_url: e.message.slice(0, 120) }) });
-        console.error("scheduled post x:", p.id, e.message);
+      const tg = String(p.target || "fb").split(",").map((s) => s.trim()).filter(Boolean);
+      const results = [];
+      for (const t of tg) {
+        try {
+          if (t === "fb") { if (!FB_ON) throw new Error("ยังไม่ได้เชื่อม Facebook"); const r = await fbPublish(p.message, p.image_url); results.push({ ok: true, url: r.url }); }
+          else if (t === "ig") { const tok = await igToken(); if (!tok) throw new Error("ยังไม่ได้เชื่อม Instagram"); const r = await igPublish(tok, p.message, p.image_url); results.push({ ok: true, url: r.url }); }
+        } catch (e) { results.push({ ok: false, error: e.message }); }
       }
+      const okOne = results.find((r) => r.ok);
+      const anyOk = results.some((r) => r.ok);
+      await sb(`scheduled_posts?id=eq.${p.id}`, { method: "PATCH", body: JSON.stringify({ status: anyOk ? "posted" : "failed", result_url: okOne ? okOne.url : String((results[0] && results[0].error) || "").slice(0, 120) }) });
+      console.log("scheduled post " + (anyOk ? "✓" : "x"), p.id, tg.join(","));
     }
   } catch (e) { console.error("scheduledPostTick:", e.message); }
 }
