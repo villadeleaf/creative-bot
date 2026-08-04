@@ -12,7 +12,7 @@ const path = require("path");
 try { require("dotenv").config({ path: path.join(__dirname, ".env") }); } catch (e) {} // โหลด .env ตอนรัน local (บน Render ใช้ env จาก dashboard)
 
 const express = require("express");
-const { generateReply, imagePrompt, analyzeImage, analyzeAdsData, visionChat, fetchLiveTrends, fetchPageStats, pageInsightBrief, FB_ON, MODEL } = require("./brain");
+const { generateReply, imagePrompt, analyzeImage, analyzeAdsData, visionChat, fetchLiveTrends, fetchPageStats, pageInsightBrief, fbPublish, FB_ON, MODEL } = require("./brain");
 
 const app = express();
 const PORT = process.env.PORT || 3100;
@@ -487,6 +487,61 @@ app.get("/api/fb-growth", async (req, res) => {
   } catch (e) { res.json({ rows: [] }); }
 });
 
+// ---- ตั้งเวลาโพสต์ / โพสต์ขึ้นเพจ FB (ทีมเขียน+ยืนยันเอง) ----
+app.get("/api/posts", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!SB_ON) return res.json({ rows: [] });
+  try { res.json({ rows: await sb("scheduled_posts?select=*&order=id.desc&limit=50") }); }
+  catch (e) { res.json({ rows: [] }); }
+});
+app.post("/api/post", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!FB_ON) return res.status(503).json({ error: "ยังไม่ได้เชื่อม Facebook" });
+  const { message, imageUrl, when } = req.body || {};
+  if (!message && !imageUrl) return res.status(400).json({ error: "ต้องมีข้อความหรือรูป" });
+  // when = "now" โพสต์เลย · หรือ ISO datetime = ตั้งเวลา
+  if (when && when !== "now") {
+    if (!SB_ON) return res.status(503).json({ error: "ตั้งเวลาต้องมีฐานข้อมูล" });
+    try {
+      const row = await sb("scheduled_posts", { method: "POST", headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ message: message || "", image_url: imageUrl || null, scheduled_at: when, status: "pending" }) });
+      return res.json({ scheduled: true, row: Array.isArray(row) ? row[0] : row });
+    } catch (e) { console.error("schedule:", e.message); return res.status(500).json({ error: "ตั้งเวลาไม่สำเร็จ" }); }
+  }
+  // โพสต์เลย
+  try {
+    const r = await fbPublish(message, imageUrl);
+    if (SB_ON) sb("scheduled_posts", { method: "POST", body: JSON.stringify({ message: message || "", image_url: imageUrl || null, scheduled_at: new Date().toISOString(), status: "posted", result_url: r.url }) }).catch(() => {});
+    fbCache.at = 0;
+    res.json({ posted: true, url: r.url });
+  } catch (e) { console.error("post:", e.message); res.status(502).json({ error: e.message }); }
+});
+app.delete("/api/posts", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!SB_ON) return res.status(503).json({ error: "nodb" });
+  const id = parseInt(req.query.id, 10);
+  if (!id) return res.status(400).json({ error: "id required" });
+  try { await sb(`scheduled_posts?id=eq.${id}`, { method: "DELETE" }); res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ error: "db" }); }
+});
+// ตัวโพสต์อัตโนมัติ: เช็คโพสต์ที่ถึงเวลาแล้ว → โพสต์ให้
+async function scheduledPostTick() {
+  if (!FB_ON || !SB_ON) return;
+  try {
+    const due = await sb(`scheduled_posts?select=*&status=eq.pending&scheduled_at=lte.${new Date().toISOString()}&order=scheduled_at.asc&limit=3`);
+    for (const p of due || []) {
+      try {
+        const r = await fbPublish(p.message, p.image_url);
+        await sb(`scheduled_posts?id=eq.${p.id}`, { method: "PATCH", body: JSON.stringify({ status: "posted", result_url: r.url }) });
+        console.log("scheduled post ✓", p.id);
+      } catch (e) {
+        await sb(`scheduled_posts?id=eq.${p.id}`, { method: "PATCH", body: JSON.stringify({ status: "failed", result_url: e.message.slice(0, 120) }) });
+        console.error("scheduled post x:", p.id, e.message);
+      }
+    }
+  } catch (e) { console.error("scheduledPostTick:", e.message); }
+}
+
 // ---- ยอดเพจ Facebook จริง (สำหรับหน้าวิเคราะห์โพสต์) ----
 let fbCache = { at: 0, data: null };
 app.get("/api/fb-stats", async (req, res) => {
@@ -563,6 +618,7 @@ if (SELF_URL) {
     }
     briefTick(); // Always-On: บรีฟเช้าอัตโนมัติช่วง 07:00
     followerSnapshotTick(); // เก็บยอดผู้ติดตามรายวันอัตโนมัติ
+    scheduledPostTick(); // โพสต์ที่ตั้งเวลาไว้ให้อัตโนมัติเมื่อถึงเวลา
   }, KEEPALIVE_MS);
   console.log(`keep-alive เปิดใช้งาน: ปลุกทุก 10 นาที (${SELF_URL})`);
 }

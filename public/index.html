@@ -283,6 +283,7 @@
         <div class="grp">ทำคอนเทนต์</div>
         <a data-sec="hooks"><span class="ic">✨</span> คลัง Hook</a>
         <a data-sec="trends"><span class="ic">≈</span> เทรนด์/โอกาส</a>
+        <a data-sec="schedule"><span class="ic">🚀</span> ตั้งเวลาโพสต์ FB</a>
         <a data-sec="calendar"><span class="ic">📅</span> ปฏิทินคอนเทนต์</a>
         <a data-sec="library"><span class="ic">💾</span> คลังไอเดีย</a>
         <a data-sec="studio"><span class="ic">🎬</span> สตูดิโอ</a>
@@ -389,6 +390,33 @@
           </div>
           <div class="gtip">📱 <b>ติดตั้งเป็นแอปบนมือถือ:</b> iPhone → เปิดใน Safari → ปุ่มแชร์ → <b>"เพิ่มลงหน้าจอโฮม"</b> · Android → Chrome → เมนู ⋮ → <b>"ติดตั้งแอป"</b> — จะได้ไอคอน 🎨 กดใช้เหมือนแอปจริง ไม่ต้องจำลิงก์</div>
           <div class="gtip">💡 เคล็ดลับ: งานส่วนใหญ่เริ่มที่ <b>"คุยกับน้อง"</b> ได้เลย — คิดไม่ออกก็พิมพ์ถามน้องก่อน แล้วค่อยไปหน้าอื่นตามงาน · คลิปที่ตัดเสร็จรวมอยู่ที่ <b>"คลังคลิป 🗂️"</b></div>
+        </section>
+
+        <!-- SCHEDULE (ตั้งเวลาโพสต์ FB) -->
+        <section class="sec" id="sec-schedule">
+          <h2 class="page">ตั้งเวลาโพสต์ FB 🚀</h2>
+          <p class="psub">เขียนโพสต์ในนี้ → โพสต์ขึ้นเพจ Villa De Leaf จริง (โพสต์เลย/ตั้งเวลา) · ทีมเขียน+ยืนยันเอง ปลอดภัย</p>
+          <div class="anwrap">
+            <div class="scard">
+              <div class="lbl2">เนื้อหาโพสต์</div>
+              <textarea id="pgMsg" rows="5" placeholder="เขียนโพสต์ที่จะขึ้นเพจ Facebook..."></textarea>
+              <button class="sug" id="pgSug" onclick="pgSuggest()">🧠 ให้น้องช่วยเขียนให้</button>
+              <div class="lbl2">แนบรูป (ไม่บังคับ)</div>
+              <input type="file" id="pgFile" accept="image/*" onchange="pgPick(this)">
+              <div id="pgThumb" class="anthumb"></div>
+              <div class="lbl2">ตั้งเวลา (เว้นว่าง = โพสต์เลย)</div>
+              <input type="datetime-local" id="pgWhen" style="width:100%;border:1px solid var(--line);background:var(--content);border-radius:10px;padding:10px;font-family:inherit;color:var(--ink)">
+              <div style="display:flex;gap:9px;margin-top:14px">
+                <button class="stgo" style="flex:1;background:var(--ok)" onclick="doPost('now')">🚀 โพสต์เลย</button>
+                <button class="stgo" style="flex:1" onclick="doPost('schedule')">⏰ ตั้งเวลา</button>
+              </div>
+              <div id="pgMsgBox" class="stmsg"></div>
+            </div>
+            <div class="scard">
+              <div class="lbl2">โพสต์ล่าสุด / ที่ตั้งเวลาไว้ (แชร์ทั้งทีม)</div>
+              <div id="pgList"><div class="empty-note">ยังไม่มีโพสต์ — เขียนโพสต์แรกได้เลยค่ะ 🚀</div></div>
+            </div>
+          </div>
         </section>
 
         <!-- CLIPS (คลังคลิปเสร็จ) -->
@@ -561,7 +589,7 @@
   }
 
   // ---- nav ----
-  var titles={home:"หน้าหลัก",chat:"คุยกับน้องครีเอทีฟ",guide:"คู่มือใช้ 📖",brand:"ข้อมูลแบรนด์ ▤",clips:"คลังคลิป 🗂️",hooks:"คลัง Hook ✨",trends:"เทรนด์/โอกาส ≈",calendar:"ปฏิทินคอนเทนต์",library:"คลังไอเดีย",studio:"สตูดิโอ 🎬",analytics:"วิเคราะห์โพสต์ 📊",ads:"Ads FB/IG"};
+  var titles={home:"หน้าหลัก",chat:"คุยกับน้องครีเอทีฟ",guide:"คู่มือใช้ 📖",brand:"ข้อมูลแบรนด์ ▤",clips:"คลังคลิป 🗂️",schedule:"ตั้งเวลาโพสต์ FB 🚀",hooks:"คลัง Hook ✨",trends:"เทรนด์/โอกาส ≈",calendar:"ปฏิทินคอนเทนต์",library:"คลังไอเดีย",studio:"สตูดิโอ 🎬",analytics:"วิเคราะห์โพสต์ 📊",ads:"Ads FB/IG"};
   function go(sec){
     document.querySelectorAll(".nav a").forEach(function(a){a.classList.toggle("on",a.dataset.sec===sec);});
     document.querySelectorAll(".sec").forEach(function(s){s.classList.toggle("on",s.id==="sec-"+sec);});
@@ -572,6 +600,7 @@
     if(sec==="ads")loadAdsLatest();
     if(sec==="brand")loadBrand();
     if(sec==="clips")loadClips();
+    if(sec==="schedule")loadPosts();
     if(sec==="analytics")loadFbStats();
   }
   document.querySelectorAll(".nav a").forEach(function(a){a.addEventListener("click",function(){go(a.dataset.sec);});});
@@ -976,6 +1005,57 @@
       renderAdsDash(j.data,d?d.toLocaleString("th-TH",{dateStyle:"medium",timeStyle:"short"}):"");}
   }catch(e){}}
 
+  // ---- ตั้งเวลาโพสต์ FB ----
+  var pgImg=null;
+  function pgPick(inp){var f=inp.files&&inp.files[0];if(!f)return;var msg=document.getElementById("pgMsgBox");
+    if(f.size>10*1024*1024){msg.style.color="var(--wait)";msg.textContent="รูปใหญ่เกิน 10MB";return;}
+    msg.style.color="var(--muted)";msg.textContent="กำลังอัปรูป...";
+    var rd=new FileReader();rd.onload=async function(){var im=new Image();im.onload=async function(){
+      var max=1440,w=im.width,h=im.height;if(w>max||h>max){var s=Math.min(max/w,max/h);w=Math.round(w*s);h=Math.round(h*s);}
+      var cv=document.createElement("canvas");cv.width=w;cv.height=h;cv.getContext("2d").drawImage(im,0,0,w,h);
+      var blob=await new Promise(function(r){cv.toBlob(r,"image/jpeg",0.88);});
+      try{var j=await api("studio/upload-url",{method:"POST",body:JSON.stringify({filename:"post.jpg",contentType:"image/jpeg"})});
+        await fetch(j.uploadUrl,{method:"PUT",headers:{"content-type":"image/jpeg"},body:blob});
+        pgImg=j.publicUrl;document.getElementById("pgThumb").innerHTML='<img src="'+pgImg+'">';msg.textContent="แนบรูปแล้ว ✓";
+      }catch(e){msg.style.color="var(--wait)";msg.textContent="อัปรูปไม่สำเร็จ";}
+    };im.src=rd.result;};rd.readAsDataURL(f);inp.value="";}
+  window.pgPick=pgPick;
+  async function pgSuggest(){var b=document.getElementById("pgSug"),msg=document.getElementById("pgMsgBox");
+    b.disabled=true;b.textContent="🧠 น้องกำลังเขียน...";
+    try{var j=await api("suggest",{method:"POST",body:JSON.stringify({format:"โพสต์ Facebook",feel:"อบอุ่น",hint:document.getElementById("pgMsg").value.trim()||"โพสต์โปรโมทรีสอร์ท"})});
+      if(j&&j.text)document.getElementById("pgMsg").value=j.text;
+    }catch(e){msg.style.color="var(--wait)";msg.textContent="ลองใหม่ค่ะ";}
+    b.disabled=false;b.textContent="🧠 ให้น้องช่วยเขียนให้";}
+  window.pgSuggest=pgSuggest;
+  async function doPost(mode){var msg=document.getElementById("pgMsgBox");var t=document.getElementById("pgMsg").value.trim();
+    if(!t&&!pgImg){msg.style.color="var(--wait)";msg.textContent="เขียนโพสต์ก่อนนะคะ";return;}
+    var when="now";
+    if(mode==="schedule"){var w=document.getElementById("pgWhen").value;
+      if(!w){msg.style.color="var(--wait)";msg.textContent="เลือกวันเวลาก่อนค่ะ (หรือกดโพสต์เลย)";return;}
+      when=new Date(w).toISOString();}
+    if(mode==="now"&&!confirm("โพสต์ขึ้นเพจ Villa De Leaf จริงเลยนะคะ? (คนตามหมื่นกว่าเห็นทันที)"))return;
+    var btns=document.querySelectorAll("#sec-schedule .stgo");btns.forEach(function(b){b.disabled=true;});
+    msg.style.color="var(--muted)";msg.textContent=mode==="now"?"กำลังโพสต์...":"กำลังตั้งเวลา...";
+    try{var j=await api("post",{method:"POST",body:JSON.stringify({message:t,imageUrl:pgImg,when:when})});
+      if(j.posted){msg.style.color="var(--ok)";msg.innerHTML='✅ โพสต์ขึ้นเพจแล้ว! '+(j.url?'<a href="'+j.url+'" target="_blank" style="color:var(--accent)">ดูโพสต์</a>':'');}
+      else if(j.scheduled){msg.style.color="var(--ok)";msg.textContent="✅ ตั้งเวลาแล้ว! น้องจะโพสต์ให้เองตามเวลาค่ะ";}
+      else{msg.style.color="var(--wait)";msg.textContent="ไม่สำเร็จ: "+(j.error||"ลองใหม่");}
+      document.getElementById("pgMsg").value="";pgImg=null;document.getElementById("pgThumb").innerHTML="";document.getElementById("pgWhen").value="";loadPosts();
+    }catch(e){msg.style.color="var(--wait)";msg.textContent="เชื่อมต่อไม่ได้ ลองใหม่ค่ะ";}
+    btns.forEach(function(b){b.disabled=false;});}
+  window.doPost=doPost;
+  var pgStatus={pending:["⏰ รอโพสต์","editing"],posted:["✅ โพสต์แล้ว","done"],failed:["⚠️ ไม่สำเร็จ","queued"]};
+  async function loadPosts(){var el=document.getElementById("pgList");
+    try{var j=await api("posts");var rows=j.rows||[];
+      if(!rows.length){el.innerHTML='<div class="empty-note">ยังไม่มีโพสต์ — เขียนโพสต์แรกได้เลยค่ะ 🚀</div>';return;}
+      el.innerHTML="";rows.forEach(function(r){var s=pgStatus[r.status]||pgStatus.pending;var d=document.createElement("div");d.className="sj";
+        var when=r.scheduled_at?new Date(r.scheduled_at).toLocaleString("th-TH",{dateStyle:"short",timeStyle:"short"}):"";
+        d.innerHTML='<div class="r1"><b>'+String(r.message||"(รูป)").replace(/</g,"&lt;").slice(0,80)+'</b><span class="sst '+s[1]+'">'+s[0]+'</span></div>'+
+          '<div class="meta">'+when+(r.status==="posted"&&r.result_url?' · <a href="'+r.result_url+'" target="_blank" style="color:var(--accent)">ดูโพสต์</a>':'')+(r.status==="failed"?' · '+String(r.result_url||"").slice(0,60):'')+'</div>';
+        if(r.status==="pending"){var rm=document.createElement("button");rm.className="sug";rm.textContent="✕ ยกเลิก";rm.onclick=async function(){if(confirm("ยกเลิกโพสต์นี้?")){await api("posts?id="+r.id,{method:"DELETE"});loadPosts();}};d.appendChild(rm);}
+        el.appendChild(d);});
+    }catch(e){el.innerHTML='<div class="empty-note">โหลดไม่ได้ ลองใหม่ค่ะ</div>';}}
+
   // ---- คลังคลิปเสร็จ ----
   async function loadClips(){var el=document.getElementById("clipGrid");
     try{var j=await api("clips");var rows=j.rows||[];
@@ -1017,6 +1097,7 @@
   var PAGEINFO={
     "sec-home":["หน้าหลัก","แผนที่ระบบน้องครีเอทีฟ — กดกล่อง CORE ดูว่าน้องทำอะไรได้ · กดกล่องด้านล่างเพื่อเริ่มงานได้เลยค่ะ"],
     "sec-guide":["คู่มือใช้","รวมวิธีใช้ทุกฟีเจอร์แบบเข้าใจง่าย อ่านครั้งเดียวใช้เป็นเลยค่ะ"],
+    "sec-schedule":["ตั้งเวลาโพสต์ FB","เขียนโพสต์ในนี้แล้วโพสต์ขึ้นเพจ Villa De Leaf จริง (โพสต์เลย/ตั้งเวลา) น้องช่วยเขียนคำให้ได้ · ทีมเขียน+ยืนยันเองทุกโพสต์ ปลอดภัยค่ะ"],
     "sec-clips":["คลังคลิป","คลิปที่น้องตัดเสร็จทั้งหมดรวมที่เดียว กดดู/โหลดซ้ำได้ตลอด แชร์ทั้งทีมค่ะ"],
     "sec-brand":["ข้อมูลแบรนด์","พิมพ์สิ่งที่อยากให้น้องจำเพิ่ม (โปร/ราคาใหม่/กิจกรรม) น้องอ่านทุกครั้งก่อนตอบ มีผลทันทีทั้งแชทและระบบเฮีย ไม่ต้องบรีฟซ้ำค่ะ"],
     "sec-hooks":["คลัง Hook","คลังประโยคเปิดเด็ดๆ สำหรับรีสอร์ท เจออันที่ชอบกด 'ใช้อันนี้' น้องเขียนสคริปต์+แคปชันจาก hook นั้นให้เลยค่ะ"],

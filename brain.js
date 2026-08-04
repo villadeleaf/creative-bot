@@ -274,6 +274,27 @@ async function fetchPageStats() {
   return { name: me.name, followers: me.followers_count || me.fan_count || 0, posts, summary };
 }
 
+// โพสต์ขึ้นเพจ Facebook (ข้อความ + รูปได้)
+async function fbPublish(message, imageUrl) {
+  if (!FB_ON) throw new Error("ยังไม่ได้เชื่อม Facebook");
+  const body = new URLSearchParams();
+  body.set("access_token", FB_TOKEN);
+  let endpoint;
+  if (imageUrl) {
+    endpoint = `${FB_PAGE_ID}/photos`;
+    body.set("url", imageUrl);
+    if (message) body.set("caption", message);
+  } else {
+    endpoint = `${FB_PAGE_ID}/feed`;
+    body.set("message", message || "");
+  }
+  const r = await fetch(`https://graph.facebook.com/v21.0/${endpoint}`, { method: "POST", body });
+  const j = await r.json();
+  if (j.error) throw new Error("fb " + j.error.code + ": " + j.error.message);
+  const postId = j.post_id || j.id || "";
+  return { ok: true, postId, url: postId ? `https://facebook.com/${postId}` : "" };
+}
+
 // น้องอ่านยอดโพสต์จริงแล้วสรุป+แนะนำ (auto)
 async function pageInsightBrief(stats) {
   if (!stats) return "";
@@ -286,4 +307,4 @@ async function pageInsightBrief(stats) {
   return await generateReply([{ role: "user", content: msg }]);
 }
 
-module.exports = { generateReply, imagePrompt, analyzeImage, analyzeAdsData, visionChat, fetchLiveTrends, fetchPageStats, pageInsightBrief, FB_ON, MODEL };
+module.exports = { generateReply, imagePrompt, analyzeImage, analyzeAdsData, visionChat, fetchLiveTrends, fetchPageStats, pageInsightBrief, fbPublish, FB_ON, MODEL };
