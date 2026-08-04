@@ -524,6 +524,13 @@
           <p class="psub">ยอดเพจ Facebook ดึงสดอัตโนมัติ · หรือแคป Insights (IG/TikTok) มาให้น้องวิเคราะห์เพิ่ม</p>
           <div id="fbPanel" style="display:none;margin-bottom:16px"></div>
           <div id="igPanel" style="display:none;margin-bottom:16px"></div>
+          <div class="scard" style="margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+              <div class="lbl2" style="margin:0">🧠 สิ่งที่น้องเรียนรู้จากเพจเรา</div>
+              <button class="sug" style="margin:0" onclick="refreshLearnings(this)">🔄 อัปเดตการเรียนรู้</button>
+            </div>
+            <div id="learnBox" style="margin-top:8px"><div class="empty-note">น้องเรียนรู้จากผลจริงของเพจ FB+IG แล้วเอามาช่วยเขียนคอนเทนต์ให้ตรงใจคนของเรา · กด "อัปเดตการเรียนรู้" ได้เลยค่ะ 🧠</div></div>
+          </div>
           <div class="anwrap">
             <div class="scard">
               <div class="lbl2">แคปหน้า Insights มาวาง</div>
@@ -636,7 +643,7 @@
     if(sec==="brand")loadBrand();
     if(sec==="clips")loadClips();
     if(sec==="schedule")loadPosts();
-    if(sec==="analytics"){loadFbStats();loadIgStats();}
+    if(sec==="analytics"){loadFbStats();loadIgStats();loadLearnings();}
     if(sec==="igcomments")loadIgComments();
   }
   document.querySelectorAll(".nav a").forEach(function(a){a.addEventListener("click",function(){go(a.dataset.sec);});});
@@ -1035,6 +1042,19 @@
         '<div class="adcard"><span class="lb">กำลังติดตาม</span><b>'+Number(j.follows_count||0).toLocaleString()+'</b><span class="sb">'+String(j.account_type||"").replace(/</g,"&lt;")+'</span></div></div>';
       el.innerHTML='<div class="scard">'+h+'</div>';
     }catch(e){el.style.display="none";}}
+
+  // ---- สมองเรียนรู้จากเพจ ----
+  function renderLearn(txt){var el=document.getElementById("learnBox");
+    if(!txt){el.innerHTML='<div class="empty-note">ยังไม่มีบทเรียน — กด "อัปเดตการเรียนรู้" ให้น้องอ่านผลเพจแล้วสรุปให้ค่ะ 🧠</div>';return;}
+    el.innerHTML='<div class="advicebox">✦ '+String(txt).replace(/</g,"&lt;").replace(/\n/g,"<br>")+'</div><div class="adwhen">น้องใช้บทเรียนนี้ช่วยเขียนแคปชัน/ไอเดีย/บรีฟให้ตรงกับที่คนของเราชอบโดยอัตโนมัติ</div>';}
+  async function loadLearnings(){try{var j=await api("learnings");renderLearn(j&&j.txt);}catch(e){}}
+  async function refreshLearnings(btn){var el=document.getElementById("learnBox");if(btn)btn.disabled=true;
+    el.innerHTML='<div class="empty-note">น้องกำลังอ่านผลจริงของเพจแล้วสรุปบทเรียน... 🧠 (สักครู่)</div>';
+    try{var j=await api("learnings/refresh",{method:"POST",body:"{}"});
+      if(j&&j.txt)renderLearn(j.txt);else el.innerHTML='<div class="empty-note">'+((j&&j.error)||"อัปเดตไม่สำเร็จ ลองใหม่ค่ะ")+'</div>';
+    }catch(e){el.innerHTML='<div class="empty-note">เชื่อมต่อไม่ได้ ลองใหม่ค่ะ</div>';}
+    if(btn)btn.disabled=false;}
+  window.loadLearnings=loadLearnings;window.refreshLearnings=refreshLearnings;
 
   // ---- ตอบคอมเมนต์ IG ----
   var _igc=[];

@@ -80,15 +80,22 @@ function currentContext() {
 const API_KEY = (process.env.ANTHROPIC_API_KEY || "").replace(/[^A-Za-z0-9_-]/g, "");
 const client = new Anthropic({ apiKey: API_KEY, maxRetries: 4 });
 
+// ล้าง surrogate ค้าง (emoji ที่โดน .slice() ตัดครึ่ง) กัน Anthropic API ปฏิเสธ JSON
+function safeStr(s) {
+  return String(s == null ? "" : s)
+    .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, "")
+    .replace(/(^|[^\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "$1");
+}
 async function generateReply(history, extra) {
+  const msgs = (history || []).map((m) => ({ role: m.role, content: typeof m.content === "string" ? safeStr(m.content) : m.content }));
   const res = await client.messages.create({
     model: MODEL,
     max_tokens: 3000,
     system: [
       { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
-      { type: "text", text: currentContext() + (extra ? "\n\n═══ ข้อมูลแบรนด์อัปเดตจากทีม (ล่าสุด — ถ้าขัดกับข้อมูลเก่า ให้ยึดอันนี้) ═══\n" + extra : "") },
+      { type: "text", text: currentContext() + (extra ? "\n\n═══ ข้อมูลแบรนด์อัปเดตจากทีม (ล่าสุด — ถ้าขัดกับข้อมูลเก่า ให้ยึดอันนี้) ═══\n" + safeStr(extra) : "") },
     ],
-    messages: history,
+    messages: msgs,
   });
   const block = res.content.find((b) => b.type === "text");
   return block ? block.text.trim() : "";
@@ -416,6 +423,21 @@ async function igRecentComments(token, limit = 15) {
   return out.slice(0, limit);
 }
 
+// ดึงโพสต์ IG เรียงตามเอนเกจ (สำหรับสมองเรียนรู้)
+async function igTopMedia(token, limit = 8) {
+  const m = await igGet(token, "me/media?fields=id,caption,media_type,like_count,comments_count,timestamp,permalink&limit=25");
+  const arr = (m.data || []).map((x) => ({
+    caption: (x.caption || "(ไม่มีแคปชั่น)").replace(/\s+/g, " ").slice(0, 70),
+    type: x.media_type || "",
+    likes: x.like_count || 0,
+    comments: x.comments_count || 0,
+    when: (x.timestamp || "").slice(0, 10),
+    url: x.permalink || "",
+  }));
+  arr.sort((a, b) => (b.likes + b.comments) - (a.likes + a.comments));
+  return arr.slice(0, limit);
+}
+
 // ตอบกลับคอมเมนต์ IG
 async function igReplyComment(token, commentId, message) {
   const p = new URLSearchParams({ message: message || "", access_token: token });
@@ -427,5 +449,5 @@ async function igReplyComment(token, commentId, message) {
 
 module.exports = {
   generateReply, imagePrompt, analyzeImage, analyzeAdsData, visionChat, fetchLiveTrends, fetchPageStats, pageInsightBrief, fbPublish, FB_ON, MODEL,
-  IG_CONFIGURED, igAuthUrl, igExchangeCode, igLongLived, igRefresh, igProfile, igPublish, igRecentComments, igReplyComment,
+  IG_CONFIGURED, igAuthUrl, igExchangeCode, igLongLived, igRefresh, igProfile, igPublish, igRecentComments, igReplyComment, igTopMedia,
 };

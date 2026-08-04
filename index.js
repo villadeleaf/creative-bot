@@ -13,7 +13,7 @@ try { require("dotenv").config({ path: path.join(__dirname, ".env") }); } catch 
 
 const express = require("express");
 const { generateReply, imagePrompt, analyzeImage, analyzeAdsData, visionChat, fetchLiveTrends, fetchPageStats, pageInsightBrief, fbPublish, FB_ON, MODEL,
-  IG_CONFIGURED, igAuthUrl, igExchangeCode, igLongLived, igRefresh, igProfile, igPublish, igRecentComments, igReplyComment } = require("./brain");
+  IG_CONFIGURED, igAuthUrl, igExchangeCode, igLongLived, igRefresh, igProfile, igPublish, igRecentComments, igReplyComment, igTopMedia } = require("./brain");
 
 const app = express();
 const PORT = process.env.PORT || 3100;
@@ -45,7 +45,7 @@ const conversations = new Map();
 
 // ---- Context Memory: ข้อมูลแบรนด์ที่ทีมเพิ่มเอง (น้องอ่านทุกครั้งก่อนตอบ) ----
 let brandCache = { at: 0, txt: "" };
-async function getBrandExtra() {
+async function brandNotes() {
   if (!SB_ON) return "";
   if (Date.now() - brandCache.at < 60 * 1000) return brandCache.txt;
   try {
@@ -53,6 +53,25 @@ async function getBrandExtra() {
     brandCache = { at: Date.now(), txt: rows.map((r) => "• " + r.txt).join("\n") };
   } catch (e) { /* ตารางยังไม่ถูกสร้าง — ข้ามเงียบๆ */ }
   return brandCache.txt;
+}
+// ---- สมองเรียนรู้: บทเรียนจากผลจริงของเพจ (สร้างจาก computeLearnings ด้านล่าง) ----
+let learnCache = { at: 0, txt: "" };
+async function getLearnings() {
+  if (!SB_ON) return "";
+  if (Date.now() - learnCache.at < 5 * 60 * 1000) return learnCache.txt;
+  try {
+    const rows = await sb("page_learnings?select=txt&order=id.desc&limit=1");
+    learnCache = { at: Date.now(), txt: (rows && rows[0] && rows[0].txt) || "" };
+  } catch (e) { /* ตารางยังไม่ถูกสร้าง — ข้ามเงียบๆ */ }
+  return learnCache.txt;
+}
+// brand + สิ่งที่เรียนรู้จากผลจริง — ผนวกเข้า system ทุกครั้งที่สร้างคอนเทนต์
+async function getBrandExtra() {
+  const [b, l] = await Promise.all([brandNotes(), getLearnings()]);
+  const parts = [];
+  if (b) parts.push(b);
+  if (l) parts.push("บทเรียนจากผลจริงของเพจ (ใช้เป็นไกด์เขียนคอนเทนต์ให้ตรงกับที่คนของเราชอบ):\n" + l);
+  return parts.join("\n\n");
 }
 
 // ---- ตรวจรหัสทีม (ใช้กับทุก endpoint ของหน้าเว็บ) ----
@@ -705,6 +724,57 @@ app.post("/api/ig/comment-reply", async (req, res) => {
   catch (e) { console.error("ig reply:", e.message); res.status(502).json({ error: e.message }); }
 });
 
+// ---- สมองเรียนรู้จากเพจ: อ่านผลจริง FB+IG → สรุปบทเรียนไว้ใช้เขียนคอนเทนต์ ----
+async function computeLearnings() {
+  const bits = [];
+  try {
+    const fb = await fetchPageStats();
+    if (fb && fb.posts && fb.posts.length) {
+      const top = fb.posts.slice().sort((a, b) => (b.likes + b.comments + b.shares) - (a.likes + a.comments + a.shares)).slice(0, 6);
+      bits.push(`เพจ Facebook "${fb.name}" (ผู้ติดตาม ${fb.followers}) — โพสต์เรียงตามเอนเกจ:\n` +
+        top.map((p) => `• "${p.msg}" — ❤️${p.likes} 💬${p.comments} 🔁${p.shares} (${p.when})`).join("\n"));
+    }
+  } catch (e) { console.error("learnings fb:", e.message); }
+  try {
+    const tok = await igToken();
+    if (tok) {
+      const media = await igTopMedia(tok, 6);
+      if (media.length) bits.push(`Instagram — โพสต์เรียงตามเอนเกจ:\n` +
+        media.map((m) => `• "${m.caption}" [${m.type}] — ❤️${m.likes} 💬${m.comments} (${m.when})`).join("\n"));
+    }
+  } catch (e) { console.error("learnings ig:", e.message); }
+  if (!bits.length) return null;
+  const prompt = `นี่คือผลจริงของโพสต์บนโซเชียลของรีสอร์ท Villa de Leaf:\n\n${bits.join("\n\n")}\n\nช่วยสรุปเป็น "บทเรียน" 4-6 ข้อสั้นๆ ที่เอาไปใช้เขียนคอนเทนต์ครั้งต่อไปได้จริง — วิเคราะห์ว่าธีม/มุมภาพ/โทน/ความยาว/เวลาโพสต์/CTA แบบไหนที่คนของเราตอบรับดี และแบบไหนที่ยังไม่เวิร์ค. เขียนเป็นข้อๆ actionable ขึ้นต้นแต่ละข้อด้วย • ไม่ต้องมี markdown ไม่ต้องเกริ่นนำ`;
+  const txt = String(await generateReply([{ role: "user", content: prompt }])).trim();
+  if (SB_ON && txt) {
+    try {
+      await sb("page_learnings?id=gte.0", { method: "DELETE" }).catch(() => {}); // เก็บอันล่าสุดอันเดียว
+      await sb("page_learnings", { method: "POST", body: JSON.stringify({ txt }) });
+    } catch (e) { console.error("save learnings:", e.message); }
+  }
+  learnCache = { at: Date.now(), txt };
+  return txt;
+}
+app.get("/api/learnings", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  try { res.json({ txt: await getLearnings() }); } catch (e) { res.json({ txt: "" }); }
+});
+app.post("/api/learnings/refresh", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  try { const txt = await computeLearnings(); res.json(txt ? { txt } : { error: "ยังไม่มีข้อมูลโพสต์พอให้เรียนรู้ค่ะ" }); }
+  catch (e) { console.error("learnings refresh:", e.message); res.status(500).json({ error: "อัปเดตไม่สำเร็จ ลองใหม่ค่ะ" }); }
+});
+// เรียนรู้อัตโนมัติวันละครั้ง (ใน keep-alive)
+let lastLearnDay = "";
+async function learningsTick() {
+  if (!SB_ON) return;
+  const today = dayKey(bkkNow());
+  if (lastLearnDay === today) return;
+  lastLearnDay = today;
+  try { await computeLearnings(); console.log("learnings updated ✓", today); }
+  catch (e) { console.error("learningsTick:", e.message); }
+}
+
 // ต่ออายุ token IG อัตโนมัติ (เหลือ < 10 วันค่อยต่อ) — เรียกจาก keep-alive
 let lastIgRefreshDay = "";
 async function igRefreshTick() {
@@ -789,6 +859,7 @@ if (SELF_URL) {
     followerSnapshotTick(); // เก็บยอดผู้ติดตามรายวันอัตโนมัติ
     scheduledPostTick(); // โพสต์ที่ตั้งเวลาไว้ให้อัตโนมัติเมื่อถึงเวลา
     igRefreshTick(); // ต่ออายุ token IG อัตโนมัติก่อนหมดอายุ
+    learningsTick(); // สมองเรียนรู้จากผลจริงของเพจ วันละครั้ง
   }, KEEPALIVE_MS);
   console.log(`keep-alive เปิดใช้งาน: ปลุกทุก 10 นาที (${SELF_URL})`);
 }
