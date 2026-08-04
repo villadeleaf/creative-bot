@@ -461,7 +461,7 @@
         <!-- CALENDAR -->
         <section class="sec" id="sec-calendar">
           <h2 class="page">ปฏิทินคอนเทนต์</h2>
-          <p class="psub">วางแผนโพสต์ทั้งเดือน · กดวันเพื่อเพิ่มโพสต์ · แชร์กันทั้งทีม ☁️</p>
+          <p class="psub">กดวัน → วางแผน + ให้น้องคิด + ตั้งเวลาโพสต์ขึ้น FB จริง · 🟢 โพสต์แล้ว · 🟡 ตั้งเวลาไว้ · แชร์ทั้งทีม</p>
           <div class="calhead">
             <div class="nav2"><button onclick="calMove(-1)">‹</button><button onclick="calMove(1)">›</button></div>
             <b id="calLabel"></b>
@@ -554,6 +554,21 @@
 <!-- POPUP -->
 <div class="pop" id="pop"><div class="box"><div class="badge" id="popB">⏳ ต้องต่อข้อมูลเพิ่ม (เฟสหลัง)</div><h3 id="popT"></h3><p id="popP"></p><button onclick="pop.classList.remove('on')">เข้าใจแล้ว</button></div></div>
 
+<!-- หน้าต่างวางแผนวัน -->
+<div class="pop" id="dayPop"><div class="box" style="max-width:440px;text-align:left">
+  <h3 id="dayTitle" style="margin-bottom:12px"></h3>
+  <div id="dayPlans"></div>
+  <div style="display:flex;gap:7px;margin:10px 0">
+    <input id="dayInput" placeholder="เช่น 10:00 REEL วิวแม่น้ำ" style="flex:1;border:1px solid var(--line);background:var(--content);border-radius:10px;padding:10px;font-size:13.5px;font-family:inherit;color:var(--ink)" onkeydown="if(event.key==='Enter')dayAdd()">
+    <button onclick="dayAdd()" style="border:none;background:var(--accent);color:#fff;border-radius:10px;padding:0 16px;font-weight:800;cursor:pointer;font-family:inherit">เพิ่ม</button>
+  </div>
+  <div style="display:flex;gap:7px;flex-wrap:wrap">
+    <button class="sug" id="dayIdeaBtn" onclick="dayNongIdea()" style="flex:1">🧠 ให้น้องคิดโพสต์วันนี้</button>
+    <button class="sug" onclick="dayToSchedule()" style="flex:1;background:var(--accent);color:#fff;border-color:transparent">🚀 ตั้งเวลาโพสต์ขึ้น FB</button>
+  </div>
+  <button onclick="document.getElementById('dayPop').classList.remove('on')" style="border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:10px;margin-top:12px;width:100%;font-family:inherit;cursor:pointer;color:var(--muted)">ปิด</button>
+</div></div>
+
 <script>
   var KEY_PASS="nc_pass",KEY_UID="nc_uid",KEY_LIB="nc_lib",KEY_CAL="nc_cal";
   function uid(){var u=localStorage.getItem(KEY_UID);if(!u){u="web-"+Math.random().toString(36).slice(2,10);localStorage.setItem(KEY_UID,u);}return u;}
@@ -624,6 +639,7 @@
     else{openPop(el.dataset.t,el.dataset.desc,"wait");}
   });});
   pop.addEventListener("click",function(e){if(e.target===this)this.classList.remove("on");});
+  document.getElementById("dayPop").addEventListener("click",function(e){if(e.target===this)this.classList.remove("on");});
 
   // ---- chat ----
   var stream=document.getElementById("stream"),input=document.getElementById("input");
@@ -729,9 +745,13 @@
   var calDate=new Date();
   var calData={}; // "y-m-dd" -> [{id,txt}]
   var calMonths=["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+  var schedByDay={}; // "y-m-dd" -> 'posted' | 'pending'
   async function loadCal(){
     try{var j=await api("calendar");calData={};(j.rows||[]).forEach(function(r){(calData[r.d]=calData[r.d]||[]).push({id:r.id,txt:r.txt});});}
     catch(e){calData={};}
+    schedByDay={};
+    try{var pj=await api("posts");(pj.rows||[]).forEach(function(p){if(!p.scheduled_at)return;var d=new Date(p.scheduled_at);var k=d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate();
+      if(p.status==="posted"||!schedByDay[k])schedByDay[k]=p.status;});}catch(e){}
     renderCal();
   }
   function calMove(d){calDate.setMonth(calDate.getMonth()+d);renderCal();}
@@ -745,22 +765,48 @@
     for(var dd=1;dd<=days;dd++){(function(dd){
       var key=y+"-"+(m+1)+"-"+dd,e=document.createElement("div");e.className="day";
       var posts=calData[key]||[];
-      var html='<div class="n">'+dd+'</div>';posts.forEach(function(p){html+='<div class="p">'+p.txt.replace(/</g,"&lt;")+'</div>';});
+      var st=schedByDay[key],dot=st==="posted"?' <span title="โพสต์แล้ว">🟢</span>':st==="pending"?' <span title="ตั้งเวลาไว้">🟡</span>':'';
+      var html='<div class="n">'+dd+dot+'</div>';posts.forEach(function(p){html+='<div class="p">'+p.txt.replace(/</g,"&lt;")+'</div>';});
       e.innerHTML=html;e.onclick=function(){editDay(key,dd,calMonths[m]);};cal.appendChild(e);
     })(dd);}
   }
-  async function editDay(key,dd,mname){
-    var posts=calData[key]||[];
-    var cur=posts.map(function(p){return p.txt;}).join(" , ");
-    var v=prompt("โพสต์วันที่ "+dd+" "+mname+"\n(คั่นหลายโพสต์ด้วย , · เว้นว่างเพื่อลบ)\nเช่น: 10:00 REEL วิวแม่น้ำ",cur);
-    if(v===null)return;
-    var arr=v.split(",").map(function(s){return s.trim();}).filter(Boolean);
-    try{
-      for(var i=0;i<posts.length;i++){await api("calendar?id="+posts[i].id,{method:"DELETE"});}
-      for(var k=0;k<arr.length;k++){await api("calendar",{method:"POST",body:JSON.stringify({d:key,txt:arr[k]})});}
-      await loadCal();
-    }catch(e){}
+  // ---- หน้าต่างวางแผนวัน (ศูนย์บัญชาการคอนเทนต์) ----
+  var dayCur={key:"",dd:"",mname:""};
+  function editDay(key,dd,mname){
+    dayCur={key:key,dd:dd,mname:mname};
+    document.getElementById("dayTitle").textContent="📅 วันที่ "+dd+" "+mname;
+    document.getElementById("dayInput").value="";
+    renderDayPlans();
+    document.getElementById("dayPop").classList.add("on");
+    setTimeout(function(){document.getElementById("dayInput").focus();},100);
   }
+  function renderDayPlans(){
+    var posts=calData[dayCur.key]||[],el=document.getElementById("dayPlans");
+    if(!posts.length){el.innerHTML='<div class="empty-note" style="padding:8px 0">ยังไม่มีแผนวันนี้ — เพิ่มด้านล่าง หรือกด "ให้น้องคิด" ค่ะ</div>';return;}
+    el.innerHTML="";posts.forEach(function(p){var d=document.createElement("div");
+      d.style.cssText="display:flex;align-items:center;gap:8px;padding:8px 11px;background:var(--content);border:1px solid var(--content-line);border-radius:10px;margin-bottom:6px;font-size:13px";
+      d.innerHTML='<span style="flex:1">'+p.txt.replace(/</g,"&lt;")+'</span>';
+      var rm=document.createElement("button");rm.textContent="🗑";rm.style.cssText="border:none;background:transparent;cursor:pointer;font-size:14px";
+      rm.onclick=async function(){try{await api("calendar?id="+p.id,{method:"DELETE"});await loadCal();renderDayPlans();}catch(e){}};
+      d.appendChild(rm);el.appendChild(d);});
+  }
+  async function dayAdd(){var inp=document.getElementById("dayInput"),v=inp.value.trim();if(!v)return;
+    try{await api("calendar",{method:"POST",body:JSON.stringify({d:dayCur.key,txt:v})});inp.value="";await loadCal();renderDayPlans();inp.focus();}catch(e){}}
+  window.dayAdd=dayAdd;
+  async function dayNongIdea(){var b=document.getElementById("dayIdeaBtn");b.disabled=true;b.textContent="🧠 น้องกำลังคิด...";
+    try{var j=await api("suggest",{method:"POST",body:JSON.stringify({format:"โพสต์ Facebook",feel:"อบอุ่น",hint:"ขอ 'หัวข้อโพสต์สั้นๆ 1 บรรทัด' สำหรับวางในปฏิทินวันที่ "+dayCur.dd+" "+dayCur.mname+" (เอาแค่บรรทัดเดียวสั้นๆ เช่น 'เช้า: รีลวิวหมอกริมน้ำ')"})});
+      if(j&&j.text){var line=(j.text.split("\n").filter(function(s){return s.trim();})[0]||j.text).replace(/^[0-9).\-\s]*/,"").slice(0,80);
+        await api("calendar",{method:"POST",body:JSON.stringify({d:dayCur.key,txt:line})});await loadCal();renderDayPlans();}
+    }catch(e){}
+    b.disabled=false;b.textContent="🧠 ให้น้องคิดโพสต์วันนี้";}
+  window.dayNongIdea=dayNongIdea;
+  function dayToSchedule(){var posts=calData[dayCur.key]||[];
+    document.getElementById("dayPop").classList.remove("on");go("schedule");
+    var parts=dayCur.key.split("-"),pad=function(n){return String(n).padStart(2,"0");};
+    document.getElementById("pgWhen").value=parts[0]+"-"+pad(parts[1])+"-"+pad(parts[2])+"T09:00";
+    if(posts.length)document.getElementById("pgMsg").value=posts.map(function(p){return p.txt;}).join("\n");
+    setTimeout(function(){document.getElementById("pgMsg").focus();},100);}
+  window.dayToSchedule=dayToSchedule;
   function planWithNong(){go("chat");quick("ช่วยวางแผนคอนเทนต์เดือนนี้ให้หน่อย บอกว่าวันไหนควรโพสต์อะไร (เอาไปกรอกในปฏิทิน)");}
 
   // ---- studio (กล่องรับงานตัดต่อ · แชร์ทั้งทีม) ----
