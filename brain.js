@@ -307,4 +307,78 @@ async function pageInsightBrief(stats) {
   return await generateReply([{ role: "user", content: msg }]);
 }
 
-module.exports = { generateReply, imagePrompt, analyzeImage, analyzeAdsData, visionChat, fetchLiveTrends, fetchPageStats, pageInsightBrief, fbPublish, FB_ON, MODEL };
+// ============================================================
+//  Instagram — เชื่อมตรงเข้าระบบ (Instagram Login API, ไม่ต้องผ่านเพจ FB)
+// ============================================================
+const IG_APP_ID = (process.env.IG_APP_ID || "").trim();
+const IG_APP_SECRET = (process.env.IG_APP_SECRET || "").trim();
+const IG_REDIRECT = ((process.env.RENDER_EXTERNAL_URL || "").trim() || "http://localhost:3100") + "/api/ig/callback";
+const IG_SCOPES = "instagram_business_basic,instagram_business_content_publish,instagram_business_manage_insights,instagram_business_manage_comments";
+const IG_CONFIGURED = !!(IG_APP_ID && IG_APP_SECRET);
+
+// ลิงก์เริ่มขออนุญาต (พาไปหน้า IG ให้กด Allow)
+function igAuthUrl(state) {
+  const p = new URLSearchParams({
+    client_id: IG_APP_ID,
+    redirect_uri: IG_REDIRECT,
+    response_type: "code",
+    scope: IG_SCOPES,
+    state: state || "",
+  });
+  return `https://www.instagram.com/oauth/authorize?${p.toString()}`;
+}
+
+// แลก code -> short-lived token + user_id
+async function igExchangeCode(code) {
+  const form = new URLSearchParams({
+    client_id: IG_APP_ID,
+    client_secret: IG_APP_SECRET,
+    grant_type: "authorization_code",
+    redirect_uri: IG_REDIRECT,
+    code,
+  });
+  const r = await fetch("https://api.instagram.com/oauth/access_token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: form.toString(),
+  });
+  const j = await r.json();
+  if (!r.ok || j.error_type || j.error) throw new Error("ig code: " + JSON.stringify(j));
+  return j; // { access_token, user_id, permissions }
+}
+
+// short -> long-lived (อายุ ~60 วัน)
+async function igLongLived(shortToken) {
+  const p = new URLSearchParams({ grant_type: "ig_exchange_token", client_secret: IG_APP_SECRET, access_token: shortToken });
+  const r = await fetch(`https://graph.instagram.com/access_token?${p.toString()}`);
+  const j = await r.json();
+  if (!r.ok || j.error) throw new Error("ig long: " + JSON.stringify(j));
+  return j; // { access_token, token_type, expires_in }
+}
+
+// ต่ออายุ long-lived (เรียกก่อนหมด 60 วัน)
+async function igRefresh(longToken) {
+  const p = new URLSearchParams({ grant_type: "ig_refresh_token", access_token: longToken });
+  const r = await fetch(`https://graph.instagram.com/refresh_access_token?${p.toString()}`);
+  const j = await r.json();
+  if (!r.ok || j.error) throw new Error("ig refresh: " + JSON.stringify(j));
+  return j;
+}
+
+async function igGet(token, pathq) {
+  const sep = pathq.includes("?") ? "&" : "?";
+  const r = await fetch(`https://graph.instagram.com/v21.0/${pathq}${sep}access_token=${token}`);
+  const j = await r.json();
+  if (!r.ok || j.error) throw new Error("ig get: " + JSON.stringify(j.error || j));
+  return j;
+}
+
+// โปรไฟล์ + สถิติ IG จริง
+async function igProfile(token) {
+  return igGet(token, "me?fields=user_id,username,account_type,media_count,followers_count,follows_count,name,profile_picture_url");
+}
+
+module.exports = {
+  generateReply, imagePrompt, analyzeImage, analyzeAdsData, visionChat, fetchLiveTrends, fetchPageStats, pageInsightBrief, fbPublish, FB_ON, MODEL,
+  IG_CONFIGURED, igAuthUrl, igExchangeCode, igLongLived, igRefresh, igProfile,
+};

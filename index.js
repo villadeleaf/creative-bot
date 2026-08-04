@@ -12,7 +12,8 @@ const path = require("path");
 try { require("dotenv").config({ path: path.join(__dirname, ".env") }); } catch (e) {} // โหลด .env ตอนรัน local (บน Render ใช้ env จาก dashboard)
 
 const express = require("express");
-const { generateReply, imagePrompt, analyzeImage, analyzeAdsData, visionChat, fetchLiveTrends, fetchPageStats, pageInsightBrief, fbPublish, FB_ON, MODEL } = require("./brain");
+const { generateReply, imagePrompt, analyzeImage, analyzeAdsData, visionChat, fetchLiveTrends, fetchPageStats, pageInsightBrief, fbPublish, FB_ON, MODEL,
+  IG_CONFIGURED, igAuthUrl, igExchangeCode, igLongLived, igRefresh, igProfile } = require("./brain");
 
 const app = express();
 const PORT = process.env.PORT || 3100;
@@ -556,6 +557,91 @@ app.get("/api/fb-stats", async (req, res) => {
   } catch (e) { console.error("fb-stats:", e.message); res.status(502).json({ error: e.message }); }
 });
 
+// ============================================================
+//  Instagram — เชื่อมตรง (Instagram Login API) + สถิติ IG จริง
+// ============================================================
+// สถานะ: ตั้งค่าแล้วยัง / เชื่อมบัญชีแล้วยัง
+app.get("/api/ig/status", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!IG_CONFIGURED) return res.json({ configured: false });
+  if (!SB_ON) return res.json({ configured: true, connected: false });
+  try {
+    const rows = await sb("ig_account?select=username,ig_user_id,expires_at&order=id.desc&limit=1");
+    if (rows && rows.length) return res.json({ configured: true, connected: true, username: rows[0].username });
+    res.json({ configured: true, connected: false });
+  } catch (e) { res.json({ configured: true, connected: false }); }
+});
+
+// เริ่มเชื่อม (เปิดในเบราว์เซอร์ — ส่งรหัสทีมมาใน ?k=) → พาไปหน้าอนุญาตของ IG
+app.get("/api/ig/connect", (req, res) => {
+  if (!IG_CONFIGURED) return res.status(503).send("ยังไม่ได้ตั้งค่า Instagram (IG_APP_ID/IG_APP_SECRET)");
+  if (!TEAM_PASSWORD || (req.query.k || "") !== TEAM_PASSWORD) return res.status(401).send("unauthorized");
+  res.redirect(igAuthUrl(TEAM_PASSWORD));
+});
+
+// ปลายทางหลังผู้ใช้กด Allow ใน IG → แลก token → เก็บลง DB
+app.get("/api/ig/callback", async (req, res) => {
+  const { code, state, error } = req.query;
+  if (error || !code) return res.redirect("/?ig=error");
+  if (!TEAM_PASSWORD || state !== TEAM_PASSWORD) return res.status(401).send("bad state");
+  try {
+    const short = await igExchangeCode(String(code));
+    const long = await igLongLived(short.access_token);
+    const prof = await igProfile(long.access_token);
+    const expISO = new Date(Date.now() + (long.expires_in || 5184000) * 1000).toISOString();
+    if (SB_ON) {
+      await sb("ig_account?id=gte.0", { method: "DELETE" }).catch(() => {}); // เก็บบัญชีเดียว
+      await sb("ig_account", { method: "POST", body: JSON.stringify({
+        ig_user_id: String(prof.user_id || short.user_id || ""),
+        username: prof.username || "",
+        access_token: long.access_token,
+        expires_at: expISO,
+      }) });
+    }
+    res.redirect("/?ig=connected");
+  } catch (e) { console.error("ig callback:", e.message); res.redirect("/?ig=error"); }
+});
+
+// สถิติ IG จริง (ต้องเชื่อมแล้ว)
+app.get("/api/ig/stats", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!IG_CONFIGURED || !SB_ON) return res.json({ off: true });
+  try {
+    const rows = await sb("ig_account?select=access_token,username&order=id.desc&limit=1");
+    if (!rows || !rows.length) return res.json({ connected: false });
+    const prof = await igProfile(rows[0].access_token);
+    res.json({ connected: true, ...prof });
+  } catch (e) { console.error("ig stats:", e.message); res.status(502).json({ error: e.message }); }
+});
+
+// ตัดการเชื่อม IG
+app.delete("/api/ig/disconnect", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!SB_ON) return res.status(503).json({ error: "nodb" });
+  try { await sb("ig_account?id=gte.0", { method: "DELETE" }); res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ error: "db" }); }
+});
+
+// ต่ออายุ token IG อัตโนมัติ (เหลือ < 10 วันค่อยต่อ) — เรียกจาก keep-alive
+let lastIgRefreshDay = "";
+async function igRefreshTick() {
+  if (!IG_CONFIGURED || !SB_ON) return;
+  const today = dayKey(bkkNow());
+  if (lastIgRefreshDay === today) return;
+  lastIgRefreshDay = today;
+  try {
+    const rows = await sb("ig_account?select=id,access_token,expires_at&order=id.desc&limit=1");
+    if (!rows || !rows.length) return;
+    const r0 = rows[0];
+    const daysLeft = (new Date(r0.expires_at).getTime() - Date.now()) / 864e5;
+    if (daysLeft > 10) return; // ยังไม่ถึงเวลาต่อ
+    const long = await igRefresh(r0.access_token);
+    const expISO = new Date(Date.now() + (long.expires_in || 5184000) * 1000).toISOString();
+    await sb(`ig_account?id=eq.${r0.id}`, { method: "PATCH", body: JSON.stringify({ access_token: long.access_token, expires_at: expISO }) });
+    console.log("ig token refreshed ✓", expISO.slice(0, 10));
+  } catch (e) { console.error("igRefreshTick:", e.message); }
+}
+
 // ---- คลังคลิปเสร็จ (งานสตูดิโอที่ done + มีไฟล์ผลลัพธ์) ----
 app.get("/api/clips", async (req, res) => {
   if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
@@ -619,6 +705,7 @@ if (SELF_URL) {
     briefTick(); // Always-On: บรีฟเช้าอัตโนมัติช่วง 07:00
     followerSnapshotTick(); // เก็บยอดผู้ติดตามรายวันอัตโนมัติ
     scheduledPostTick(); // โพสต์ที่ตั้งเวลาไว้ให้อัตโนมัติเมื่อถึงเวลา
+    igRefreshTick(); // ต่ออายุ token IG อัตโนมัติก่อนหมดอายุ
   }, KEEPALIVE_MS);
   console.log(`keep-alive เปิดใช้งาน: ปลุกทุก 10 นาที (${SELF_URL})`);
 }
