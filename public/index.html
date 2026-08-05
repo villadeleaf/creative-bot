@@ -494,6 +494,21 @@
         <section class="sec" id="sec-studio">
           <h2 class="page">สตูดิโอ 🎬</h2>
           <p class="psub">ส่งงานให้น้องตัดคลิป · อยู่ในระบบที่เดียว · ฟรี (น้องตัดให้ · ส่งเช้าได้บ่าย)</p>
+          <div class="scard" style="margin-bottom:16px">
+            <h3>🖼️ รีลด่วนจากรูป — วางรูป ได้คลิปทันที (ทำในเว็บ ฟรี)</h3>
+            <p class="lbl2" style="margin-top:0;font-weight:400">เลือกรูปจริง 2-10 รูป → น้องต่อเป็นรีล 9:16 ให้ในเครื่องพี่เลย (ซูมนุ่ม + เปลี่ยนภาพเนียน + ข้อความ + เพลง) เสร็จ ~10-30 วิ ไม่ต้องรอ</p>
+            <input type="file" id="qrFiles" accept="image/*" multiple onchange="qrPick(this)">
+            <div id="qrThumbs" class="stthumbs"></div>
+            <div class="lbl2">ข้อความบนคลิป (ไม่บังคับ)</div>
+            <input type="text" id="qrText" placeholder="เช่น Villa de Leaf · ริมแม่น้ำเพชรบุรี" style="width:100%;box-sizing:border-box;border:1px solid var(--line);background:var(--content);border-radius:10px;padding:9px;font-family:inherit;color:var(--ink)">
+            <div class="lbl2">ฟีล (จังหวะภาพ)</div>
+            <div class="opt" id="qrFeel" data-opt="qrfeel"><span class="o on" data-d="3.2">หรูสงบ</span><span class="o" data-d="1.7">สนุกเร็ว</span><span class="o" data-d="2.4">อบอุ่น</span></div>
+            <div class="lbl2">เพลงประกอบ (ไม่บังคับ · เลือกไฟล์ mp3)</div>
+            <input type="file" id="qrMusic" accept="audio/*">
+            <button class="stgo" onclick="makeReel()">✨ สร้างรีลทันที</button>
+            <div id="qrMsg" class="stmsg"></div>
+            <div id="qrOut" style="margin-top:10px"></div>
+          </div>
           <div class="studio">
             <div class="scard">
               <h3>✨ ส่งงานใหม่</h3>
@@ -845,6 +860,56 @@
     });});
   });
   function stOpt(){var o={};document.querySelectorAll('#sec-studio .opt').forEach(function(g){var on=g.querySelector('.o.on');o[g.dataset.opt]=on?on.textContent:'';});return o;}
+
+  // ---- รีลด่วนจากรูป: สร้างในเบราว์เซอร์ (canvas → MediaRecorder) ----
+  var _qrImgs=[];
+  function qrPick(inp){var fs=Array.prototype.slice.call(inp.files||[]).filter(function(f){return /^image\//.test(f.type);}).slice(0,10);
+    _qrImgs=[];var box=document.getElementById('qrThumbs');box.innerHTML='';var msg=document.getElementById('qrMsg');
+    if(!fs.length){msg.textContent='';return;}
+    fs.forEach(function(f){var img=new Image();img.src=URL.createObjectURL(f);_qrImgs.push(img);
+      var d=document.createElement('div');d.className='th';var t=document.createElement('img');t.src=img.src;d.appendChild(t);box.appendChild(d);});
+    msg.style.color='var(--muted)';msg.textContent=fs.length+' รูปพร้อม — กด "สร้างรีลทันที" ได้เลยค่ะ';}
+  window.qrPick=qrPick;
+  function qrMime(){var c=['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+    for(var i=0;i<c.length;i++){if(window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(c[i]))return c[i];}return '';}
+  async function makeReel(){var msg=document.getElementById('qrMsg'),out=document.getElementById('qrOut');
+    if(_qrImgs.length<2){msg.style.color='var(--wait)';msg.textContent='เลือกรูปอย่างน้อย 2 รูปก่อนนะคะ';return;}
+    var mime=qrMime();
+    if(!window.MediaRecorder||!mime){msg.style.color='var(--wait)';msg.textContent='เบราว์เซอร์นี้ยังทำรีลในเว็บไม่ได้ (ลอง Safari/Chrome ล่าสุด)';return;}
+    await Promise.all(_qrImgs.map(function(im){return (im.complete&&im.naturalWidth)?Promise.resolve():new Promise(function(r){im.onload=r;im.onerror=r;});}));
+    out.innerHTML='';msg.style.color='var(--muted)';msg.textContent='กำลังสร้างรีล... ✨ อย่าปิดหน้านี้นะคะ';
+    var W=1080,H=1920,cv=document.createElement('canvas');cv.width=W;cv.height=H;var ctx=cv.getContext('2d');
+    var fon=document.querySelector('#qrFeel .o.on');var per=fon?parseFloat(fon.dataset.d):3.0;var trans=0.6;
+    var text=(document.getElementById('qrText').value||'').trim();
+    var fo=document.querySelector('#sec-studio .opt[data-opt="font"] .o.on');var fn=fo?fo.textContent:'Sukhumvit';
+    var fontFam=fn.indexOf('Bai')>=0?'"Bai Jamjuree"':fn.indexOf('Charm')>=0?'"Charmonman"':'"Sukhumvit Set"';
+    var n=_qrImgs.length,total=per*n;
+    var stream=cv.captureStream(30);
+    var audioEl=null,actx=null,mf=document.getElementById('qrMusic').files[0];
+    if(mf){try{audioEl=new Audio(URL.createObjectURL(mf));audioEl.loop=true;actx=new (window.AudioContext||window.webkitAudioContext)();
+      var s=actx.createMediaElementSource(audioEl),dest=actx.createMediaStreamDestination();s.connect(dest);s.connect(actx.destination);
+      dest.stream.getAudioTracks().forEach(function(tk){stream.addTrack(tk);});}catch(e){audioEl=null;}}
+    var chunks=[],rec=new MediaRecorder(stream,{mimeType:mime});
+    rec.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data);};
+    rec.onstop=function(){if(actx){try{actx.close();}catch(e){}}
+      var isMp4=mime.indexOf('mp4')>=0,blob=new Blob(chunks,{type:isMp4?'video/mp4':'video/webm'}),url=URL.createObjectURL(blob),ext=isMp4?'mp4':'webm';
+      out.innerHTML='<video src="'+url+'" controls playsinline style="width:216px;border-radius:10px;display:block;background:#000"></video>'+
+        '<a class="stgo" style="display:inline-block;text-decoration:none;width:auto;padding:9px 18px;margin-top:8px" href="'+url+'" download="villa-reel.'+ext+'">⬇️ โหลดรีล ('+ext+')</a>';
+      msg.style.color='var(--ok)';msg.textContent='เสร็จแล้ว! รีลพร้อมโหลด 🎉'+(isMp4?'':' (ไฟล์ webm — ถ้า IG ไม่รับ แปลงเป็น mp4 ก่อนนะคะ)');};
+    function cover(img,scale){var iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height,sc=Math.max(W/iw,H/ih)*scale;return {w:iw*sc,h:ih*sc};}
+    function drawImg(img,prog,alpha){ctx.globalAlpha=alpha;var d=cover(img,1.06+0.12*prog),dx=(W-d.w)/2-(d.w-W)*0.15*prog,dy=(H-d.h)/2;ctx.drawImage(img,dx,dy,d.w,d.h);ctx.globalAlpha=1;}
+    function wrapText(t,x,y,maxW,lh){var w=t.split(' '),line='',lines=[];for(var i=0;i<w.length;i++){var tt=line?line+' '+w[i]:w[i];if(ctx.measureText(tt).width>maxW&&line){lines.push(line);line=w[i];}else line=tt;}if(line)lines.push(line);var yy=y-(lines.length-1)*lh;for(var j=0;j<lines.length;j++)ctx.fillText(lines[j],x,yy+j*lh);}
+    function drawText(){if(!text)return;ctx.save();var g=ctx.createLinearGradient(0,H-380,0,H);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,0.55)');ctx.fillStyle=g;ctx.fillRect(0,H-380,W,380);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='600 62px '+fontFam+',sans-serif';ctx.shadowColor='rgba(0,0,0,0.5)';ctx.shadowBlur=14;wrapText(text,W/2,H-150,W-160,74);ctx.restore();}
+    rec.start();if(audioEl){try{audioEl.play();}catch(e){}}
+    var t0=performance.now();
+    function frame(){var el=(performance.now()-t0)/1000;
+      if(el>=total){rec.stop();if(audioEl)audioEl.pause();return;}
+      var idx=Math.min(n-1,Math.floor(el/per)),ls=idx*per,lp=(el-ls)/per;
+      ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);drawImg(_qrImgs[idx],lp,1);
+      var remain=per-(el-ls);if(idx<n-1&&remain<trans)drawImg(_qrImgs[idx+1],0,1-(remain/trans));
+      drawText();requestAnimationFrame(frame);}
+    requestAnimationFrame(frame);}
+  window.makeReel=makeReel;
   function stRenderThumbs(){var el=document.getElementById('stThumbs');el.innerHTML='';
     stFiles.forEach(function(f,i){var d=document.createElement('div');d.className='th';
       if(f.type&&f.type.indexOf('video')===0){d.textContent='🎬';}else if(f.url){var im=document.createElement('img');im.src=f.url;d.appendChild(im);}
@@ -1040,6 +1105,9 @@
         '<div class="adcard"><span class="lb">ผู้ติดตาม</span><b>'+Number(j.followers_count||0).toLocaleString()+'</b><span class="sb">คน</span></div>'+
         '<div class="adcard"><span class="lb">โพสต์</span><b>'+Number(j.media_count||0).toLocaleString()+'</b><span class="sb">โพสต์</span></div>'+
         '<div class="adcard"><span class="lb">กำลังติดตาม</span><b>'+Number(j.follows_count||0).toLocaleString()+'</b><span class="sb">'+String(j.account_type||"").replace(/</g,"&lt;")+'</span></div></div>';
+      var posts=(j.posts||[]);
+      if(posts.length){h+='<div class="lbl2" style="margin-top:12px">โพสต์เด่นล่าสุด (ยอดจริงจาก IG · กดดูโพสต์)</div><table class="adtable"><tr><th>โพสต์</th><th>❤️</th><th>💬</th></tr>'+
+        posts.map(function(p){var m=String(p.caption||"(รูป)").replace(/</g,"&lt;");var cell=p.url?'<a href="'+p.url+'" target="_blank" rel="noopener" style="color:inherit">'+m+' ↗</a>':m;return '<tr><td>'+cell+'</td><td>'+(p.likes||0)+'</td><td>'+(p.comments||0)+'</td></tr>';}).join("")+'</table>';}
       el.innerHTML='<div class="scard">'+h+'</div>';
     }catch(e){el.style.display="none";}}
 
