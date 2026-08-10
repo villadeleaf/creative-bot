@@ -593,6 +593,31 @@ app.post("/api/captions", async (req, res) => {
     return caps ? res.json({ caps }) : res.json({ raw: text });
   } catch (e) { console.error("captions:", e.message); res.status(500).json({ error: "เขียนไม่สำเร็จ ลองใหม่ค่ะ" }); }
 });
+// ---- โรงงานคอนเทนต์: ปั้นโพสต์หลากหลายทีเดียว (ลงเยอะแบบไม่ซ้ำ) ----
+function parseContentPlan(text) {
+  const blocks = String(text).split(/\[\[POST\]\]/i).map((b) => b.trim()).filter(Boolean);
+  const out = [];
+  for (const b of blocks) {
+    const theme = ((b.match(/THEME:\s*(.+)/i) || [])[1] || "").trim().slice(0, 40);
+    const ci = b.search(/CAPTION:/i);
+    const caption = ci >= 0 ? b.slice(ci).replace(/CAPTION:\s*/i, "").trim() : "";
+    if (caption) out.push({ theme, caption: caption.slice(0, 1500) });
+  }
+  return out;
+}
+app.post("/api/content-plan", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  const count = Math.min(20, Math.max(3, parseInt((req.body || {}).count, 10) || 7));
+  const theme = String((req.body || {}).theme || "").trim();
+  const msg = `ช่วยวางแผนโพสต์ Facebook ให้รีสอร์ท Villa de Leaf จำนวน ${count} โพสต์ ที่หลากหลายไม่ซ้ำกันเลย (คละธีม: มุมห้อง/กิจกรรม/รีวิวลูกค้า/บรรยากาศ/เกร็ดน่ารู้/ชวนมาพัก)` +
+    (theme ? ` โดยเน้นธีม "${theme}"` : "") +
+    `\nแต่ละโพสต์ = แคปชันพร้อมโพสต์จริง (อีโมจิพอดี ไม่ประกาศส่วนลด ปิดท้ายชวนทัก LINE @villadeleaf) · แต่ละอันต้องต่างมุมกันจริงๆ ไม่ซ้ำ\n\nตอบตามรูปแบบนี้เป๊ะ ห้ามมีข้อความอื่นนำหน้า/ต่อท้าย:\n[[POST]]\nTHEME: <ธีมสั้นๆ>\nCAPTION:\n<แคปชัน ขึ้นบรรทัดได้>\n[[POST]]\nTHEME: <ธีมถัดไป>\nCAPTION:\n<แคปชัน>`;
+  try {
+    const text = await generateReply([{ role: "user", content: msg }], await getBrandExtra());
+    const posts = parseContentPlan(text);
+    return posts.length ? res.json({ posts }) : res.json({ raw: text });
+  } catch (e) { console.error("content-plan:", e.message); res.status(500).json({ error: "สร้างแผนไม่สำเร็จ ลองใหม่ค่ะ" }); }
+});
 app.delete("/api/posts", async (req, res) => {
   if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
   if (!SB_ON) return res.status(503).json({ error: "nodb" });

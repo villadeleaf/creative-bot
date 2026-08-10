@@ -397,6 +397,18 @@
         <section class="sec" id="sec-schedule">
           <h2 class="page">ตั้งเวลาโพสต์ FB + IG 🚀</h2>
           <p class="psub">เขียนครั้งเดียว → โพสต์ขึ้น Facebook + Instagram พร้อมกัน (โพสต์เลย/ตั้งเวลา) · ทีมเขียน+ยืนยันเอง ปลอดภัย</p>
+          <div class="scard" style="margin-bottom:16px">
+            <h3>🏭 โรงงานคอนเทนต์ — สร้างโพสต์รัวๆ ทีเดียว</h3>
+            <p class="lbl2" style="margin-top:0;font-weight:400">น้องปั้นโพสต์หลากหลาย (ไม่ซ้ำ) ทีเดียว → พี่เลือก/แก้ → ตั้งเวลากระจายลง FB อัตโนมัติ (ลงเยอะแบบสะอาด ไม่สแปม)</p>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <input type="text" id="cpTheme" placeholder="ธีม (ไม่บังคับ) เช่น หน้าฝน / วันแม่" style="flex:1;min-width:160px;box-sizing:border-box;border:1px solid var(--line);background:var(--content);border-radius:10px;padding:9px;font-family:inherit;color:var(--ink)">
+              <select id="cpCount" style="border:1px solid var(--line);background:var(--content);border-radius:10px;padding:9px;font-family:inherit;color:var(--ink)"><option value="7">7 โพสต์</option><option value="10">10 โพสต์</option><option value="14">14 โพสต์</option></select>
+              <button class="sug" style="white-space:nowrap;margin:0" onclick="genPlan()">🏭 สร้างแผน</button>
+            </div>
+            <div id="cpList"></div>
+            <div id="cpActions" style="display:none;margin-top:10px"><button class="stgo" onclick="schedulePlan()">🚀 ตั้งเวลาที่เลือกทั้งหมดลง FB</button></div>
+            <div id="cpMsg" class="stmsg"></div>
+          </div>
           <div class="anwrap">
             <div class="scard">
               <div class="lbl2">💡 มีแค่ไอเดีย? ให้น้องแตกแคปชั่น 4 แพลตฟอร์มให้</div>
@@ -1304,6 +1316,37 @@
     var mb=document.getElementById("pgMsgBox");mb.style.color="var(--ok)";mb.textContent="ใส่แคปชั่น "+k.toUpperCase()+" ให้แล้ว — แนบรูป/ตั้งเวลาแล้วโพสต์ได้เลยค่ะ";}}
   function copyCap(k,btn){if(window._caps&&window._caps[k]){navigator.clipboard.writeText(window._caps[k]).then(function(){if(btn){var o=btn.textContent;btn.textContent="✓ คัดลอกแล้ว";setTimeout(function(){btn.textContent=o;},1500);}});}}
   window.genCaptions=genCaptions;window.useCaption=useCaption;window.copyCap=copyCap;
+
+  // ---- โรงงานคอนเทนต์: ปั้นโพสต์รัวๆ + ตั้งเวลากระจาย ----
+  var _plan=[];
+  function renderPlan(){var box=document.getElementById('cpList');
+    if(!_plan.length){box.innerHTML='';document.getElementById('cpActions').style.display='none';return;}
+    box.innerHTML='';_plan.forEach(function(p,i){var d=document.createElement('div');d.className='sj';d.style.marginTop='8px';
+      d.innerHTML='<div class="r1"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" '+(p.on?'checked':'')+' onchange="_plan['+i+'].on=this.checked"> <b>'+(p.theme||('โพสต์ '+(i+1))).replace(/</g,"&lt;")+'</b></label></div>'+
+        '<textarea rows="4" style="width:100%;box-sizing:border-box;margin-top:6px;border:1px solid var(--line);background:var(--content);border-radius:10px;padding:9px;font-family:inherit;color:var(--ink)" onchange="_plan['+i+'].caption=this.value">'+String(p.caption).replace(/</g,"&lt;")+'</textarea>';
+      box.appendChild(d);});
+    document.getElementById('cpActions').style.display='block';}
+  async function genPlan(){var msg=document.getElementById('cpMsg'),box=document.getElementById('cpList');
+    var count=document.getElementById('cpCount').value,theme=document.getElementById('cpTheme').value.trim();
+    box.innerHTML='<div class="empty-note">น้องกำลังปั้นโพสต์หลากหลายให้... 🏭 (สักครู่)</div>';document.getElementById('cpActions').style.display='none';msg.textContent='';
+    try{var j=await api('content-plan',{method:'POST',body:JSON.stringify({count:count,theme:theme})});
+      if(j.posts&&j.posts.length){_plan=j.posts.map(function(p){return {theme:p.theme,caption:p.caption,on:true};});renderPlan();
+        msg.style.color='var(--ok)';msg.textContent='ได้ '+_plan.length+' โพสต์ — เลือก/แก้แล้วกดตั้งเวลาได้เลยค่ะ';}
+      else{box.innerHTML='<div class="empty-note">'+((j&&j.error)||'สร้างไม่สำเร็จ ลองใหม่ค่ะ')+'</div>';}
+    }catch(e){box.innerHTML='<div class="empty-note">เชื่อมต่อไม่ได้ ลองใหม่ค่ะ</div>';}}
+  async function schedulePlan(){var msg=document.getElementById('cpMsg');
+    var sel=_plan.filter(function(p){return p.on&&p.caption.trim();});
+    if(!sel.length){msg.style.color='var(--wait)';msg.textContent='เลือกอย่างน้อย 1 โพสต์ค่ะ';return;}
+    if(!confirm('ตั้งเวลา '+sel.length+' โพสต์ลง FB? น้องจะกระจายวันละ 2 โพสต์ (10:00 และ 18:00) เริ่มพรุ่งนี้'))return;
+    msg.style.color='var(--muted)';msg.textContent='กำลังตั้งเวลา...';var ok=0,fail=0;
+    for(var i=0;i<sel.length;i++){
+      var dd=new Date();dd.setDate(dd.getDate()+1+Math.floor(i/2));dd.setHours(i%2===0?10:18,0,0,0);
+      try{var j=await api('post',{method:'POST',body:JSON.stringify({message:sel[i].caption,when:dd.toISOString(),targets:['fb']})});if(j.scheduled)ok++;else fail++;}
+      catch(e){fail++;}
+      msg.textContent='กำลังตั้งเวลา... '+(i+1)+'/'+sel.length;}
+    msg.style.color='var(--ok)';msg.textContent='✅ ตั้งเวลาแล้ว '+ok+' โพสต์'+(fail?' (พลาด '+fail+')':'')+' — น้องจะโพสต์ให้เองตามเวลาค่ะ';
+    _plan=[];renderPlan();document.getElementById('cpList').innerHTML='';loadPosts();}
+  window.genPlan=genPlan;window.schedulePlan=schedulePlan;
   var pgStatus={pending:["⏰ รอโพสต์","editing"],posted:["✅ โพสต์แล้ว","done"],failed:["⚠️ ไม่สำเร็จ","queued"]};
   async function loadPosts(){var el=document.getElementById("pgList");
     try{var j=await api("posts");var rows=j.rows||[];
