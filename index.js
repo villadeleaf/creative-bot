@@ -460,6 +460,14 @@ app.post("/api/studio", async (req, res) => {
     res.json({ row: Array.isArray(r) ? r[0] : r });
   } catch (e) { console.error("studio post:", e.message); res.status(500).json({ error: "db" }); }
 });
+app.delete("/api/studio", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!SB_ON) return res.status(503).json({ error: "nodb" });
+  const id = parseInt(req.query.id, 10);
+  if (!id) return res.status(400).json({ error: "id required" });
+  try { await sb(`studio_jobs?id=eq.${id}`, { method: "DELETE" }); res.json({ ok: true }); }
+  catch (e) { console.error("studio delete:", e.message); res.status(500).json({ error: "db" }); }
+});
 
 // ---- เทรนด์สดจากเว็บ (แคช 6 ชม. กันเปลืองค่าค้นเว็บ) ----
 let trendsCache = { at: 0, items: [] };
@@ -682,7 +690,9 @@ app.get("/api/ig/stats", async (req, res) => {
     const rows = await sb("ig_account?select=access_token,username&order=id.desc&limit=1");
     if (!rows || !rows.length) return res.json({ connected: false });
     const prof = await igProfile(rows[0].access_token);
-    res.json({ connected: true, ...prof });
+    let posts = [];
+    try { posts = await igTopMedia(rows[0].access_token, 5); } catch (e) { console.error("ig top:", e.message); }
+    res.json({ connected: true, ...prof, posts });
   } catch (e) { console.error("ig stats:", e.message); res.status(502).json({ error: e.message }); }
 });
 

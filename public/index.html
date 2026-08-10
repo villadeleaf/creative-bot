@@ -501,8 +501,8 @@
             <div id="qrThumbs" class="stthumbs"></div>
             <div class="lbl2">ข้อความบนคลิป (ไม่บังคับ)</div>
             <input type="text" id="qrText" placeholder="เช่น Villa de Leaf · ริมแม่น้ำเพชรบุรี" style="width:100%;box-sizing:border-box;border:1px solid var(--line);background:var(--content);border-radius:10px;padding:9px;font-family:inherit;color:var(--ink)">
-            <div class="lbl2">ฟีล (จังหวะภาพ)</div>
-            <div class="opt" id="qrFeel" data-opt="qrfeel"><span class="o on" data-d="3.2">หรูสงบ</span><span class="o" data-d="1.7">สนุกเร็ว</span><span class="o" data-d="2.4">อบอุ่น</span></div>
+            <div class="lbl2">สไตล์</div>
+            <div class="opt" id="qrStyle" data-opt="qrstyle"><span class="o on" data-s="lux">🤍 มินิมอลหรู</span><span class="o" data-s="y2k">⚡ Y2K สนุก</span><span class="o" data-s="dark">🖤 ดาร์กหรู</span></div>
             <div class="lbl2">เพลงประกอบ (ไม่บังคับ · เลือกไฟล์ mp3)</div>
             <input type="file" id="qrMusic" accept="audio/*">
             <button class="stgo" onclick="makeReel()">✨ สร้างรีลทันที</button>
@@ -617,11 +617,20 @@
   function pass(){return localStorage.getItem(KEY_PASS)||"";}
   var pop=document.getElementById("pop");
   // ---- ตัวช่วยเรียก API (แนบรหัสทีม + จัดการ 401) ----
+  function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
   async function api(path,opts){opts=opts||{};
     opts.headers=Object.assign({"content-type":"application/json","x-team-pass":pass()},opts.headers||{});
-    var r=await fetch("/api/"+path,opts);
-    if(r.status===401){localStorage.removeItem(KEY_PASS);location.reload();throw new Error("401");}
-    return r.json();
+    var isGet=!opts.method||opts.method==="GET"; // ลองซ้ำเฉพาะ GET (กันโพสต์/บันทึกซ้ำ)
+    var tries=isGet?4:1,lastErr;
+    for(var i=0;i<tries;i++){
+      try{
+        var r=await fetch("/api/"+path,opts);
+        if(r.status===401){localStorage.removeItem(KEY_PASS);location.reload();throw new Error("401");}
+        if(isGet&&r.status>=502&&r.status<=504&&i<tries-1){await sleep(3000);continue;} // เว็บกำลังตื่น รอแล้วลองใหม่
+        return r.json();
+      }catch(e){if(e.message==="401")throw e;lastErr=e;if(i<tries-1&&isGet)await sleep(2500);else throw e;}
+    }
+    throw lastErr;
   }
 
   // ---- login ----
@@ -879,7 +888,13 @@
     await Promise.all(_qrImgs.map(function(im){return (im.complete&&im.naturalWidth)?Promise.resolve():new Promise(function(r){im.onload=r;im.onerror=r;});}));
     out.innerHTML='';msg.style.color='var(--muted)';msg.textContent='กำลังสร้างรีล... ✨ อย่าปิดหน้านี้นะคะ';
     var W=1080,H=1920,cv=document.createElement('canvas');cv.width=W;cv.height=H;var ctx=cv.getContext('2d');
-    var fon=document.querySelector('#qrFeel .o.on');var per=fon?parseFloat(fon.dataset.d):3.0;var trans=0.6;
+    var STYLES={
+      lux:{per:3.2,trans:0.6,filter:'saturate(1.08) contrast(1.03)',vig:0.65,scan:false,text:'#ffffff'},
+      y2k:{per:1.5,trans:0.3,filter:'saturate(1.5) contrast(1.12) brightness(1.03)',vig:0.3,scan:true,text:'#ffffff'},
+      dark:{per:3.4,trans:0.7,filter:'brightness(0.82) contrast(1.16) saturate(0.9)',vig:1.0,scan:false,text:'#e8c17a'}
+    };
+    var so=document.querySelector('#qrStyle .o.on');var st=STYLES[so?so.dataset.s:'lux']||STYLES.lux;
+    var per=st.per,trans=st.trans;
     var text=(document.getElementById('qrText').value||'').trim();
     var fo=document.querySelector('#sec-studio .opt[data-opt="font"] .o.on');var fn=fo?fo.textContent:'Sukhumvit';
     var fontFam=fn.indexOf('Bai')>=0?'"Bai Jamjuree"':fn.indexOf('Charm')>=0?'"Charmonman"':'"Sukhumvit Set"';
@@ -899,15 +914,19 @@
     function cover(img,scale){var iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height,sc=Math.max(W/iw,H/ih)*scale;return {w:iw*sc,h:ih*sc};}
     function drawImg(img,prog,alpha){ctx.globalAlpha=alpha;var d=cover(img,1.06+0.12*prog),dx=(W-d.w)/2-(d.w-W)*0.15*prog,dy=(H-d.h)/2;ctx.drawImage(img,dx,dy,d.w,d.h);ctx.globalAlpha=1;}
     function wrapText(t,x,y,maxW,lh){var w=t.split(' '),line='',lines=[];for(var i=0;i<w.length;i++){var tt=line?line+' '+w[i]:w[i];if(ctx.measureText(tt).width>maxW&&line){lines.push(line);line=w[i];}else line=tt;}if(line)lines.push(line);var yy=y-(lines.length-1)*lh;for(var j=0;j<lines.length;j++)ctx.fillText(lines[j],x,yy+j*lh);}
-    function drawText(){if(!text)return;ctx.save();var g=ctx.createLinearGradient(0,H-380,0,H);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,0.55)');ctx.fillStyle=g;ctx.fillRect(0,H-380,W,380);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='600 62px '+fontFam+',sans-serif';ctx.shadowColor='rgba(0,0,0,0.5)';ctx.shadowBlur=14;wrapText(text,W/2,H-150,W-160,74);ctx.restore();}
+    function drawScan(){ctx.save();ctx.globalAlpha=0.08;ctx.fillStyle='#000';for(var y=0;y<H;y+=4)ctx.fillRect(0,y,W,2);ctx.restore();}
+    function drawVignette(s){if(!s)return;ctx.save();var g=ctx.createRadialGradient(W/2,H/2,H*0.3,W/2,H/2,H*0.72);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,'+(0.55*s)+')');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);ctx.restore();}
+    function drawText(){if(!text)return;ctx.save();var g=ctx.createLinearGradient(0,H-380,0,H);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,0.55)');ctx.fillStyle=g;ctx.fillRect(0,H-380,W,380);ctx.fillStyle=st.text;ctx.textAlign='center';ctx.font='600 62px '+fontFam+',sans-serif';ctx.shadowColor='rgba(0,0,0,0.5)';ctx.shadowBlur=14;wrapText(text,W/2,H-150,W-160,74);ctx.restore();}
     rec.start();if(audioEl){try{audioEl.play();}catch(e){}}
     var t0=performance.now();
     var iv=setInterval(function(){var el=(performance.now()-t0)/1000;
       if(el>=total){clearInterval(iv);try{rec.stop();}catch(e){}if(audioEl)audioEl.pause();return;}
       var idx=Math.min(n-1,Math.floor(el/per)),ls=idx*per,lp=(el-ls)/per;
-      ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);drawImg(_qrImgs[idx],lp,1);
+      ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+      ctx.filter=st.filter;drawImg(_qrImgs[idx],lp,1);
       var remain=per-(el-ls);if(idx<n-1&&remain<trans)drawImg(_qrImgs[idx+1],0,1-(remain/trans));
-      drawText();},1000/30);}
+      ctx.filter='none';
+      if(st.scan)drawScan();drawVignette(st.vig);drawText();},1000/30);}
   window.makeReel=makeReel;
   function stRenderThumbs(){var el=document.getElementById('stThumbs');el.innerHTML='';
     stFiles.forEach(function(f,i){var d=document.createElement('div');d.className='th';
@@ -961,6 +980,8 @@
           (thumbs?'<div class="sthumbs">'+thumbs+'</div>':'')+
           (r.result_url?'<a class="dl" href="'+r.result_url+'" target="_blank" rel="noopener">⬇️ โหลดคลิปที่เสร็จแล้ว</a>':'');
         if(r.status==='done'){var rv=document.createElement('button');rv.className='sug';rv.style.marginLeft='8px';rv.textContent='🔁 ขอแก้เพิ่ม';rv.onclick=function(){reviseJob(r);};d.appendChild(rv);}
+        var del=document.createElement('button');del.className='sug';del.style.marginLeft='8px';del.textContent='🗑 ลบ';
+        del.onclick=async function(){if(confirm('ลบงานนี้ออกจากระบบ?')){try{await api('studio?id='+r.id,{method:'DELETE'});loadStudio();}catch(e){}}};d.appendChild(del);
         el.appendChild(d);});
     }catch(e){el.innerHTML='<div class="empty-note">โหลดงานไม่ได้ ลองใหม่ค่ะ</div>';}}
 
@@ -1305,6 +1326,8 @@
           '<b>'+String(r.brief).replace(/</g,"&lt;")+'</b>'+
           '<div class="meta2">'+[r.format,r.feel,dt].filter(Boolean).join(" · ")+'</div>'+
           '<a class="dl2" href="'+r.result_url+'" target="_blank" rel="noopener" download>⬇️ โหลดคลิป</a>';
+        var del=document.createElement("button");del.className="sug";del.style.marginTop="6px";del.textContent="🗑 ลบ";
+        del.onclick=async function(){if(confirm("ลบคลิปนี้ออกจากคลัง?")){try{await api("studio?id="+r.id,{method:"DELETE"});loadClips();}catch(e){}}};d.appendChild(del);
         el.appendChild(d);});
     }catch(e){el.innerHTML='<div class="empty-note">โหลดไม่ได้ ลองใหม่ค่ะ</div>';}}
 
