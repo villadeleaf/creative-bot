@@ -33,6 +33,37 @@
     font-family:"Sukhumvit Set","Sarabun","Noto Sans Thai",-apple-system,"Segoe UI",sans-serif}
   .mono{font-family:"SF Mono",Menlo,Consolas,monospace}
   button,input,textarea{font-family:inherit}
+  /* ===== FX: glass · glow · animation ===== */
+  @keyframes fadeup{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @keyframes glowpulse{0%,100%{box-shadow:0 0 0 0 rgba(37,99,235,.35)}50%{box-shadow:0 0 24px 4px rgba(37,99,235,.28)}}
+  .sec.on{animation:fadeup .28s ease}
+  .glass{background:color-mix(in srgb, var(--panel) 78%, transparent);backdrop-filter:blur(12px) saturate(1.15);-webkit-backdrop-filter:blur(12px) saturate(1.15);border:1px solid color-mix(in srgb, var(--ink) 10%, transparent);border-radius:16px;box-shadow:var(--shadow);transition:transform .18s ease, box-shadow .18s ease}
+  .glass:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(37,99,235,.14)}
+  .btn-glow{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:12px 18px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(37,99,235,.35);transition:transform .15s ease, box-shadow .18s ease}
+  .btn-glow:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(37,99,235,.5)}
+  /* ===== dashboard v2 ===== */
+  .dash{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:18px}
+  .stat{padding:16px 18px;position:relative;overflow:hidden}
+  .stat .lb{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .stat .val{font-size:28px;font-weight:800;color:var(--ink);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .stat .sub{font-size:12px;color:var(--muted);margin-top:4px}
+  .stat .trend{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;display:inline-block;margin-top:6px}
+  .stat .trend.up{color:var(--ok);background:color-mix(in srgb, var(--ok) 12%, transparent)}
+  .stat .trend.flat{color:var(--muted);background:color-mix(in srgb, var(--muted) 10%, transparent)}
+  .stat .ring{position:absolute;top:14px;right:14px;width:38px;height:38px}
+  .quick{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:6px}
+  .qbtn{padding:16px;cursor:pointer;text-align:left;display:flex;gap:12px;align-items:center;border:none;background:var(--panel);color:var(--ink);width:100%;font:inherit}
+  .qbtn .ic{width:40px;height:40px;border-radius:11px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-size:20px;flex:none;transition:transform .18s ease}
+  .qbtn:hover .ic{transform:scale(1.08) rotate(-4deg)}
+  .qbtn b{display:block;font-size:14px;margin-bottom:2px}
+  .qbtn small{color:var(--muted);font-size:12px}
+  .dash-brief{padding:18px;margin-bottom:18px;background:linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, var(--panel)), var(--panel));border-left:3px solid var(--accent)}
+  .dash-brief h3{margin:0 0 8px;font-size:15px;display:flex;align-items:center;gap:8px}
+  .dash-brief .brief-txt{font-size:14px;line-height:1.7;color:var(--ink);white-space:pre-wrap;max-height:220px;overflow-y:auto}
+  .dash-learn{padding:16px 18px;margin-bottom:8px;border-left:3px solid var(--ok)}
+  .dash-learn h3{margin:0 0 8px;font-size:14px;color:var(--ok);display:flex;align-items:center;gap:6px}
+  .dash-learn .txt{font-size:13px;line-height:1.6;color:var(--ink);white-space:pre-wrap;max-height:180px;overflow-y:auto}
+  .nav-badge{margin-left:auto;font-size:10.5px;background:var(--accent);color:#fff;border-radius:8px;padding:1px 7px;font-weight:800;min-width:18px;text-align:center}
 
   /* ===== LAYOUT ===== */
   #app{display:none;height:100vh;overflow:hidden}
@@ -286,21 +317,24 @@
       <div class="brand"><span class="dot">▶</span><div>media24<small>MARKETING STUDIO</small></div></div>
       <nav class="nav" id="nav">
         <a data-sec="home" class="on"><span class="ic">▦</span> หน้าหลัก</a>
-        <a data-sec="chat"><span class="ic">💬</span> คุยกับน้องครีเอทีฟ</a>
-        <a data-sec="guide"><span class="ic">📖</span> คู่มือใช้</a>
-        <div class="grp">ทำคอนเทนต์</div>
+        <a data-sec="chat"><span class="ic">💬</span> แชท AI</a>
+        <div class="grp">สร้างคอนเทนต์</div>
         <a data-sec="hooks"><span class="ic">✨</span> คลัง Hook</a>
         <a data-sec="trends"><span class="ic">≈</span> เทรนด์/โอกาส</a>
-        <a data-sec="schedule"><span class="ic">🚀</span> ตั้งเวลาโพสต์ FB</a>
-        <a data-sec="calendar"><span class="ic">📅</span> ปฏิทินคอนเทนต์</a>
         <a data-sec="library"><span class="ic">💾</span> คลังไอเดีย</a>
+        <div class="grp">ทำวิดีโอ</div>
         <a data-sec="studio"><span class="ic">🎬</span> สตูดิโอ</a>
         <a data-sec="clips"><span class="ic">🗂️</span> คลังคลิป</a>
-        <a data-sec="brand"><span class="ic">▤</span> ข้อมูลแบรนด์</a>
+        <div class="grp">เผยแพร่</div>
+        <a data-sec="schedule"><span class="ic">🚀</span> ตั้งเวลาโพสต์</a>
+        <a data-sec="calendar"><span class="ic">📅</span> ปฏิทิน</a>
+        <a data-sec="igcomments"><span class="ic">💬</span> ตอบคอมเมนต์ IG</a>
         <div class="grp">วิเคราะห์</div>
         <a data-sec="analytics"><span class="ic">📊</span> วิเคราะห์โพสต์</a>
-        <a data-sec="igcomments"><span class="ic">💬</span> ตอบคอมเมนต์ IG</a>
         <a data-sec="ads"><span class="ic">🎯</span> Ads FB/IG</a>
+        <div class="grp">ตั้งค่า</div>
+        <a data-sec="brand"><span class="ic">▤</span> ข้อมูลแบรนด์</a>
+        <a data-sec="guide"><span class="ic">📖</span> คู่มือใช้</a>
       </nav>
       <div class="foot">
         <a onclick="toggleTheme()" id="themeBtn" style="display:inline-block;margin-bottom:6px">🌙 โหมดมืด</a><br>
@@ -317,31 +351,36 @@
 
         <!-- HOME -->
         <section class="sec on" id="sec-home">
-          <h2 class="page">Marketing System — Villa de Leaf</h2>
-          <p class="psub">กดกล่อง 🟢 เพื่อเริ่มใช้งานจริง (แชทได้เลย) · 🔴 = ต่อข้อมูลเฟสหลัง</p>
-          <div id="briefBox" class="advicebox" style="display:none;margin-bottom:14px"></div>
-          <div class="band"><div class="label mono">CORE · สมองของระบบ</div>
-            <div class="core">
-              <div class="cell" data-badge="ok" data-t="Claude — สมองของระบบ" data-desc="ใช้ Claude (claude-sonnet-5) เป็นสมองคิดแคปชัน ไอเดีย สคริปต์คลิป แคมเปญ ให้จริง — ทำงานอยู่แล้วในหน้า 'คุยกับน้องครีเอทีฟ' ค่ะ"><span class="qm">?</span><div class="i">✦</div><b>Claude</b><span class="mono">ORCHESTRATION</span><span class="cdot ok"></span></div>
-              <div class="cell" data-badge="ok" data-t="Context Memory — คลังความรู้+ข้อมูลแบรนด์" data-desc="น้องจำข้อมูล Villa de Leaf ครบ (ห้อง ราคา จุดขาย กิจกรรม) และทีมเพิ่ม/แก้เองได้ที่หน้า 'ข้อมูลแบรนด์' — โปรใหม่ เมนูใหม่ พิมพ์ปุ๊บ น้องใช้ตอบทันที ไม่ต้องบรีฟซ้ำค่ะ"><span class="qm">?</span><div class="i">▤</div><b>คลังความรู้รีสอร์ท</b><span class="mono">ROOMS·PRICE·BRAND</span><span class="cdot ok"></span></div>
-              <div class="cell" data-badge="ok" data-t="Always-On — ทุกเช้า 07:00" data-desc="ระบบตื่นเองทุกเช้า 07:00 — น้องค้นเทรนด์สดจากเว็บ แล้วเขียน 'บรีฟเช้านี้' (วันนี้ควรโพสต์อะไร) รอไว้ที่หน้าหลัก ทีมแค่เปิดมาอ่านตอนกินกาแฟค่ะ ☕"><span class="qm">?</span><div class="i">◷</div><b>Always-On</b><span class="mono">ทุกเช้า 07:00</span><span class="cdot ok"></span></div>
-              <div class="cell" data-badge="ok" data-t="Connectors — ต่อระบบจริง" data-desc="🟢 ต่อเพจ Facebook Villa De Leaf จริงแล้ว! ยอดผู้ติดตาม+โพสต์เด่นดึงสดอัตโนมัติ เข้าหน้าวิเคราะห์+บรีฟเช้า · ช่อง /ask ต่อระบบเฮียพร้อม · IG ผูกกับเพจแล้วเพิ่มได้เลยค่ะ"><span class="qm">?</span><div class="i">⇄</div><b>Connectors</b><span class="mono">FB·LINE·API</span><span class="cdot ok"></span></div>
-            </div>
+          <h2 class="page">สวัสดีค่ะ 👋</h2>
+          <p class="psub">Dashboard ของ media24 · ทุกอย่างพร้อมใช้งาน</p>
+
+          <!-- LIVE STATS -->
+          <div class="dash" id="dashStats">
+            <div class="stat glass"><div class="lb">📘 Facebook</div><div class="val" id="dsFbFollow">—</div><div class="sub" id="dsFbName">กำลังโหลด...</div></div>
+            <div class="stat glass"><div class="lb">📸 Instagram</div><div class="val" id="dsIgFollow">—</div><div class="sub" id="dsIgName">กำลังโหลด...</div></div>
+            <div class="stat glass"><div class="lb">📝 โพสต์รอ</div><div class="val" id="dsPending">—</div><div class="sub">ตั้งเวลาไว้</div></div>
+            <div class="stat glass"><div class="lb">🎬 คลิปเสร็จ</div><div class="val" id="dsClips">—</div><div class="sub">ในคลัง</div></div>
           </div>
-          <div class="cols">
-            <div class="col d"><div class="ch">Data · วิเคราะห์</div>
-              <div class="item" data-s="wait" data-t="ANALYTICS" data-desc="รวมยอดทุกแพลตฟอร์ม — ต้องต่อข้อมูลก่อน (เฟสหลัง)"><div class="t mono">ANALYTICS <span class="arw">→</span></div><span class="dot wait"></span><div class="d"><b>ยอดวิว +38%</b> เดือนนี้</div></div>
-              <div class="item" data-s="wait" data-t="ส่องคู่แข่ง" data-desc="ดึง hook เด็ดคู่แข่ง — เฟสหลัง"><div class="t mono">ส่องคู่แข่ง <span class="arw">→</span></div><span class="dot wait"></span><div class="d">รีสอร์ทแก่งกระจานโพสต์อะไร</div></div>
-            </div>
-            <div class="col c"><div class="ch">ทำคอนเทนต์ ✨</div>
-              <div class="item" data-s="ok" data-prompt="ช่วยคิดแคปชันโปรโมทรีสอร์ท 2-3 สไตล์ พร้อมแฮชแท็ก"><div class="t mono">แคปชัน+แฮชแท็ก <span class="arw">→</span></div><span class="dot ok"></span><div class="d">2-3 สไตล์ ก๊อปโพสต์ได้เลย</div></div>
-              <div class="item" data-s="ok" data-prompt="ขอสคริปต์คลิป TikTok โปรโมทรีสอร์ท พร้อมมุมกล้อง"><div class="t mono">สคริปต์คลิป <span class="arw">→</span></div><span class="dot ok"></span><div class="d">TikTok/Reels มุมกล้อง+เพลง</div></div>
-              <div class="item" data-s="ok" data-prompt="อาทิตย์นี้ควรโพสต์อะไรบ้าง ช่วยวางแผน"><div class="t mono">ไอเดีย+แผนโพสต์ <span class="arw">→</span></div><span class="dot ok"></span><div class="d">วางแผนทั้งอาทิตย์</div></div>
-            </div>
-            <div class="col a"><div class="ch">โฆษณา · แคมเปญ 🎯</div>
-              <div class="item" data-s="wait" data-t="ADS FB/IG" data-desc="โพสต์ไหนควรบูสต์ — ต้องต่อ API โฆษณา (เฟสหลัง)"><div class="t mono">ADS·FB/IG <span class="arw">→</span></div><span class="dot wait"></span><div class="d">โพสต์ไหนควรบูสต์</div></div>
-              <div class="item" data-s="ok" data-prompt="ช่วยคิดแคมเปญ #เที่ยวเดอลีฟแล้วปัง ลูกค้าแชร์แลกพักฟรี ขอกติกา+โพสต์"><div class="t mono">#เที่ยวเดอลีฟแล้วปัง <span class="arw">→</span></div><span class="dot ok"></span><div class="d">แชร์แลกพักฟรี 🏆</div></div>
-            </div>
+
+          <!-- MORNING BRIEF -->
+          <div id="briefBox" class="glass dash-brief" style="display:none">
+            <h3>☀️ บรีฟเช้านี้</h3>
+            <div class="brief-txt" id="briefTxt"></div>
+          </div>
+
+          <!-- QUICK ACTIONS -->
+          <div style="font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.16em;margin:8px 4px 8px;text-transform:uppercase">ทางลัด · ทำอะไรวันนี้</div>
+          <div class="quick">
+            <button class="qbtn glass" onclick="go('chat')"><div class="ic">💬</div><div><b>แชท AI</b><small>ถามน้องอะไรก็ได้</small></div></button>
+            <button class="qbtn glass" onclick="go('schedule')"><div class="ic">🚀</div><div><b>สร้าง+ตั้งเวลาโพสต์</b><small>โรงงานคอนเทนต์ + แคปชัน</small></div></button>
+            <button class="qbtn glass" onclick="go('studio')"><div class="ic">🎬</div><div><b>ทำรีลด่วน</b><small>รูป → คลิปใน 30 วิ</small></div></button>
+            <button class="qbtn glass" onclick="go('analytics')"><div class="ic">📊</div><div><b>ดูสถิติ + เรียนรู้</b><small>ยอดเพจ + บทเรียน AI</small></div></button>
+          </div>
+
+          <!-- LEARNINGS -->
+          <div id="learnBoxHome" class="glass dash-learn" style="display:none;margin-top:14px">
+            <h3>🧠 สิ่งที่น้องเรียนรู้จากเพจเรา</h3>
+            <div class="txt" id="learnTxtHome"></div>
           </div>
         </section>
 
@@ -667,7 +706,7 @@
   }
   document.getElementById("pw").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
   function logout(){localStorage.removeItem(KEY_PASS);location.reload();}
-  function showApp(){document.getElementById("login").style.display="none";document.getElementById("app").style.display="block";loadCal();loadLib();loadChat();loadBrief();}
+  function showApp(){document.getElementById("login").style.display="none";document.getElementById("app").style.display="block";loadCal();loadLib();loadChat();loadBrief();loadDash();}
   // โหลดประวัติแชทเดิมกลับมาโชว์ (เก็บถาวรใน Supabase — restart ก็ไม่ลืม)
   async function loadChat(){
     try{var j=await api("history?userId="+encodeURIComponent(uid()));
@@ -688,6 +727,7 @@
     if(sec==="brand")loadBrand();
     if(sec==="clips")loadClips();
     if(sec==="schedule")loadPosts();
+    if(sec==="home")loadDash();
     if(sec==="analytics"){loadFbStats();loadIgStats();loadLearnings();}
     if(sec==="igcomments")loadIgComments();
   }
@@ -1402,10 +1442,26 @@
 
   // ---- บรีฟเช้า (Always-On 07:00) โชว์หน้าหลัก ----
   async function loadBrief(){try{var j=await api("brief-latest");
-    if(j&&j.txt){var b=document.getElementById("briefBox");var d=j.created_at?new Date(j.created_at).toLocaleString("th-TH",{dateStyle:"medium",timeStyle:"short"}):"";
-      b.style.display="block";
-      b.innerHTML='<b>◷ บรีฟเช้านี้ (อัตโนมัติทุก 07:00):</b><br>'+String(j.txt).replace(/</g,"&lt;").replace(/\n/g,"<br>")+(d?'<div class="adwhen">อัปเดต: '+d+'</div>':'');}
+    var box=document.getElementById("briefBox");var txt=document.getElementById("briefTxt");
+    if(j&&j.txt&&box&&txt){box.style.display="block";txt.textContent=String(j.txt);}
   }catch(e){}}
+  // ---- Dashboard: สถิติสด (FB + IG + คิวโพสต์ + คลิป) ----
+  async function loadDash(){
+    try{var j=await api('fb-stats');if(j&&!j.off&&!j.error){
+      document.getElementById('dsFbFollow').textContent=Number(j.followers||0).toLocaleString();
+      document.getElementById('dsFbName').textContent=(j.name||'')+' · เพจ FB';}}catch(e){}
+    try{var s=await api('ig/status');if(s&&s.connected){
+      var i=await api('ig/stats');if(i&&i.connected){
+        document.getElementById('dsIgFollow').textContent=Number(i.followers_count||0).toLocaleString();
+        document.getElementById('dsIgName').textContent='@'+(i.username||'')+' · IG';}}
+      else{document.getElementById('dsIgFollow').textContent='—';document.getElementById('dsIgName').textContent='ยังไม่เชื่อม';}}catch(e){}
+    try{var p=await api('posts');var pend=(p.rows||[]).filter(function(r){return r.status==='pending';}).length;
+      document.getElementById('dsPending').textContent=pend;}catch(e){}
+    try{var c=await api('clips');document.getElementById('dsClips').textContent=(c.rows||[]).length;}catch(e){}
+    // learnings box บน home
+    try{var l=await api('learnings');var lb=document.getElementById('learnBoxHome'),lt=document.getElementById('learnTxtHome');
+      if(l&&l.txt&&lb&&lt){lb.style.display='block';lt.textContent=String(l.txt);}}catch(e){}
+  }
 
   // ---- ปุ่ม ⓘ อธิบายทุกหน้า (กดดูว่าหน้านี้ทำอะไร) ----
   var PAGEINFO={
