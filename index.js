@@ -469,6 +469,87 @@ app.delete("/api/studio", async (req, res) => {
   catch (e) { console.error("studio delete:", e.message); res.status(500).json({ error: "db" }); }
 });
 
+// ============================================================
+//  🎬 EDITOR — Timeline video editor (MVP)
+//  Project schema: {name, size{w,h}, duration, clips[{id,type,track,src?,text?,start,end,x?,y?,scale?,opacity?,size?,color?,font?}]}
+// ============================================================
+function emptyProject(name) {
+  return { name: name || "New project", size: { w: 1080, h: 1920 }, duration: 30, clips: [], updated_at: new Date().toISOString() };
+}
+function sanitizeProject(p) {
+  const q = p || {};
+  return {
+    name: String(q.name || "Untitled").slice(0, 100),
+    size: { w: Math.min(3840, Math.max(240, +(q.size && q.size.w) || 1080)), h: Math.min(3840, Math.max(240, +(q.size && q.size.h) || 1920)) },
+    duration: Math.min(600, Math.max(1, +q.duration || 30)),
+    clips: (Array.isArray(q.clips) ? q.clips : []).slice(0, 100).map((c, i) => ({
+      id: String(c.id || `c${Date.now()}_${i}`).slice(0, 40),
+      type: ["video", "image", "text", "audio"].includes(c.type) ? c.type : "image",
+      track: Math.min(9, Math.max(0, +c.track || 0)),
+      src: c.src ? String(c.src).slice(0, 500) : "",
+      text: c.text ? String(c.text).slice(0, 300) : "",
+      start: Math.max(0, +c.start || 0),
+      end: Math.max(0.1, +c.end || 1),
+      x: +c.x || 0,
+      y: +c.y || 0,
+      scale: Math.min(5, Math.max(0.1, +c.scale || 1)),
+      opacity: Math.min(1, Math.max(0, c.opacity == null ? 1 : +c.opacity)),
+      size: Math.min(200, Math.max(12, +c.size || 60)),
+      color: (c.color && /^#[0-9A-Fa-f]{6}$/.test(c.color)) ? c.color : "#FFFFFF",
+      font: ["Sukhumvit-Bold", "BaiJamjuree-Bold", "Charmonman-Bold"].includes(c.font) ? c.font : "Sukhumvit-Bold",
+      volume: Math.min(2, Math.max(0, c.volume == null ? 1 : +c.volume)),
+    })),
+    updated_at: new Date().toISOString(),
+  };
+}
+
+// สร้างโปรเจกต์ใหม่ / บันทึก (upsert ตาม id)
+app.post("/api/editor/save", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!SB_ON) return res.status(503).json({ error: "nodb" });
+  const { id, project } = req.body || {};
+  const data = sanitizeProject(project || {});
+  try {
+    if (id) {
+      await sb(`editor_projects?id=eq.${parseInt(id, 10)}`, { method: "PATCH", body: JSON.stringify({ name: data.name, data }) });
+      return res.json({ id: parseInt(id, 10), data });
+    }
+    const r = await sb("editor_projects", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ name: data.name, data }) });
+    const row = Array.isArray(r) ? r[0] : r;
+    res.json({ id: row.id, data });
+  } catch (e) { console.error("editor save:", e.message); res.status(500).json({ error: "db: " + e.message.slice(0, 100) }); }
+});
+// ลิสต์โปรเจกต์
+app.get("/api/editor/list", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!SB_ON) return res.json({ rows: [] });
+  try {
+    const rows = await sb("editor_projects?select=id,name,created_at,data&order=id.desc&limit=50");
+    res.json({ rows: (rows || []).map((r) => ({ id: r.id, name: r.name, created_at: r.created_at, duration: (r.data && r.data.duration) || 0, clipCount: (r.data && r.data.clips ? r.data.clips.length : 0) })) });
+  } catch (e) { console.error("editor list:", e.message); res.json({ rows: [] }); }
+});
+// โหลดโปรเจกต์
+app.get("/api/editor/:id", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!SB_ON) return res.status(503).json({ error: "nodb" });
+  const id = parseInt(req.params.id, 10);
+  if (!id) return res.status(400).json({ error: "id required" });
+  try {
+    const rows = await sb(`editor_projects?select=id,name,data&id=eq.${id}&limit=1`);
+    if (!rows || !rows.length) return res.status(404).json({ error: "not found" });
+    res.json({ id: rows[0].id, name: rows[0].name, project: rows[0].data || emptyProject(rows[0].name) });
+  } catch (e) { console.error("editor get:", e.message); res.status(500).json({ error: "db" }); }
+});
+// ลบโปรเจกต์
+app.delete("/api/editor/:id", async (req, res) => {
+  if (!teamOK(req)) return res.status(401).json({ error: "unauthorized" });
+  if (!SB_ON) return res.status(503).json({ error: "nodb" });
+  const id = parseInt(req.params.id, 10);
+  if (!id) return res.status(400).json({ error: "id required" });
+  try { await sb(`editor_projects?id=eq.${id}`, { method: "DELETE" }); res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ error: "db" }); }
+});
+
 // ---- เทรนด์สดจากเว็บ (แคช 6 ชม. กันเปลืองค่าค้นเว็บ) ----
 let trendsCache = { at: 0, items: [] };
 app.get("/api/trends-live", async (req, res) => {
